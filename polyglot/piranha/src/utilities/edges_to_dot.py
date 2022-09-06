@@ -1,6 +1,5 @@
-from collections import namedtuple
-from re import L
-from typing import OrderedDict
+# pip install -m toml
+
 import toml
 from dataclasses import dataclass
 
@@ -63,4 +62,5 @@ for node, edges in graph_dict.items():
 
 dot_lines.append('\n}')
 
+# can be fed to: https://dreampuf.github.io/GraphvizOnline
 print('\n'.join(dot_lines))
