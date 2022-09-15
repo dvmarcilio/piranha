@@ -196,79 +196,74 @@ Contributions for the :calendar: (`planned`) languages or any other languages ar
 
 ## Getting Started with demos
 
-<h3> Running the Demos </h3> 
+<h3> Running the Demos </h3>
 
-We believe, the easiest way to get started with Piranha is to build upon the demos. 
+We believe the easiest way to get started with Piranha is to build upon the demos.
 
-To setup the demo please follow the below steps:
-* `git clone https://github.com/uber/piranha.git` 
+To setup the demo please follow the steps below:
+
+* `git clone https://github.com/uber/piranha.git`
 * `cd polyglot/piranha`
 * Create a virtual environment:
-  - `python3 -m venv .env`
-  - `source .env/bin/activate`
-* Install Polyglot Piranha 
-  - `pip install .` to run demo against current source code (please install [Rust](https://www.rust-lang.org/tools/install), it takes less than a minute)
-  - Or, `pip install polyglot-piranha` to run demos against the latest release.
+  * `python3 -m venv .env`
+  * `source .env/bin/activate`
+* Install Polyglot Piranha:
+  * `pip install .` to run the demo against current source code (please install [Rust](https://www.rust-lang.org/tools/install), it takes less than a minute).
+  * Or, `pip install polyglot-piranha` to run demos against the latest release.
 
-
-Currently, we have demos for the following : 
+Currently, we have demos for the following :
 
 <h4>Stale Feature Flag Cleanup:</h4>
 
-  * run `python3 demo/stale_feature_flag_cleanup_demos.py`. It will execute the scenarios listed under [demo/java/ff](/polyglot/piranha/demo/java/ff/configurations/rules.toml) and [demo/kt/ff](/polyglot/piranha/demo/kt/ff/configurations/rules.toml). These scenarios use simple feature flag API. 
-  * In these demos the `configurations` contain :
-    * `rules.toml` : expresses how to capture different feature flag APIs (`isTreated`, `enum constant`)
-    * `piranha_arguments.toml` : expresses the flag behavior, i.e. the flag name and whether it is treated or not. Basically the `substitutions` provided in the `piranha_arguments.toml` can be used to instantiate the rules [reference](#piranha-arguments).
+* run `python3 demo/stale_feature_flag_cleanup_demos.py`. It will execute the scenarios listed under `demo_feature_flag_cleanup`: [java](/polyglot/piranha/demo/feature_flag_cleanup/java/configurations/rules.toml) and [kotlin](/polyglot/piranha/demo/feature_flag_cleanup/kotlin/configurations/rules.toml). These scenarios use simple feature flag API.
+* In these demos, for each language, the `configurations` directory contains :
+* `rules.toml` : expresses how to capture different feature flag APIs (`isTreated`, `enum constant`).
+* `piranha_arguments.toml` : expresses the flag behavior, i.e. the flag name and whether it is treated or not. Basically, the `substitutions` provided in the `piranha_arguments.toml` can be used to instantiate the rules ([reference](#piranha-arguments)).
 
-<h4>  Match-only rules: </h4> 
+<h4>  Match-only rules: </h4>
 
-  * run `python3 demo/match_only_demos.py`
-  * This demo also shows how the piranha summary output can be used. 
-    * `rules.toml` : express how to capture two patterns - (i) invocation of the method `fooBar("...")`  and invocation of the method `barFoo("...")` (but only in static methods)
+* run `python3 demo/match_only_demos.py`
+* This demo also shows how the piranha summary output can be used.
+* `rules.toml` : express how to capture two patterns - (i) invocation of the method `fooBar("...")`  and invocation of the method `barFoo("...")` (but only in static methods).
 
-<h4>  Structural Find/Replace </h4> 
+<h4>  Structural Find/Replace </h4>
 
-  * run `python3 demo/find_replace_demos.py`
-  * This demo shows how to use Piranha as a simple structural find/replace tool (that optionally hooks up to built-in cleanup rules)
+* run `python3 demo/find_replace_demos.py`
+* This demo shows how to use Piranha as a simple structural find/replace tool (that optionally hooks up to built-in cleanup rules).
 
-<h4>  Structural Find/Replace with Custom Cleanup </h4> 
+<h4>  Structural Find/Replace with Custom Cleanup </h4>
 
-   * run `python3 demo/find_replace_custom_cleanup_demos.py`
-   * This demo shows how to replace `new ArrayList<>()` with `Collections.emptyList()`. Note it also adds the required import statement. 
+* run `python3 demo/find_replace_custom_cleanup_demos.py`
+* This demo shows how to replace `new ArrayList<>()` with `Collections.emptyList()`. Note it also adds the required import statement.
 
+*Please refer to our test cases at [`/polyglot/piranha/test-resources/<language>/`](/polyglot/piranha/test-resources/) as a reference for handling complicated scenarios*.
 
-*Please refer to our test cases at [`/polyglot/piranha/test-resources/<language>/`](/polyglot/piranha/test-resources/) as a reference for handling complicated scenarios*
-
-
-<h3>Building upon the stale feature flag cleanup demo </h3> 
+<h3>Building upon the stale feature flag cleanup demo </h3>
 
 First, check if Polyglot Piranha supports *Stale feature flag cleanup* for the required language.
 
-Then see if your API usage is similar to the ones shown in the demo ([java-demo](/polyglot/piranha/demo/java/configurations/rules.toml)) or in the test resources ([java-ff_system1](/polyglot/piranha/test-resources/java/feature_flag_system_1/control/configurations/rules.toml), [java-ff_system2](/polyglot/piranha/test-resources/java/feature_flag_system_2/control/configurations/rules.toml), [kt-ff_system1](/polyglot/piranha/test-resources/kotlin/feature_flag_system_1/control/configurations/rules.toml), [kt-ff_system2](/polyglot/piranha/test-resources/kotlin/feature_flag_system_2/control/configurations/rules.toml)).
+Then see if your API usage is similar to the ones shown in the demo ([java-demo](/polyglot/piranha/demo/feature_flag_cleanup/java/configurations/rules.toml)) or in the test resources ([java-ff_system1](/polyglot/piranha/test-resources/java/feature_flag_system_1/control/configurations/rules.toml), [java-ff_system2](/polyglot/piranha/test-resources/java/feature_flag_system_2/control/configurations/rules.toml), [kt-ff_system1](/polyglot/piranha/test-resources/kt/feature_flag_system_1/control/configurations/rules.toml), [kt-ff_system2](/polyglot/piranha/test-resources/kt/feature_flag_system_2/control/configurations/rules.toml)).
 
-If not :|, try to adapt these examples to your requirements. Further, you can study the [tree-sitter query documentation](https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries) to understand how tree-sitter queries work. It is recommended to read the section- [Adding support for a new feature flag system](#adding-support-for-a-new-feature-flag-system)
+If not :|, try to adapt these examples to your requirements. Further, you can study the [tree-sitter query documentation](https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries) to understand how tree-sitter queries work. We recommended to read the section- [Adding support for a new feature flag system](#adding-support-for-a-new-feature-flag-system).
 
-Then adapt the [argument file](/polyglot/piranha/demo/java/configurations/piranha_arguments.toml) as per your requirements. For instance, you may want to update the value corresponding to the `@stale_flag_name` and `@treated`. If your rules do not contain require other tags feel free to remove them from your arguments file. In most cases [edges file](/polyglot/piranha/src/cleanup_rules/java/edges.toml) is not required, unless your feature flag system API rules are inter-dependent. 
-
+Then adapt the [argument file](/polyglot/piranha/demo/java/configurations/piranha_arguments.toml) as per your requirements. For instance, you may want to update the value corresponding to the `@stale_flag_name` and `@treated`. If your rules do not contain require other tags feel free to remove them from your arguments file. In most cases [edges file](/polyglot/piranha/src/cleanup_rules/java/edges.toml) is not required, unless your feature flag system API rules are inter-dependent.
 
 More details for configuring Piranha - [Adding support for a new feature flag system](#adding-support-for-a-new-feature-flag-system)
 and [Adding Cleanup Rules](#adding-cleanup-rules).
-
 
 *One can similarly build upon the other demos too.*
 
 ## *Stale Feature Flag Cleanup* in depth
 
-<h3> Adding support for a new feature flag system </h3>
+### Adding support for a new feature flag system
 
 To onboard a new feature flag system users will have to specify the `<path-to-configurations>/rules.toml` and `<path-to-configurations>/edges.toml` files (look [here](/polyglot/piranha/src/cleanup_rules/java)). The `rules.toml` will contain rules that identify the usage of a feature flag system API. Defining `edges.toml` is required if your feature flag system API rules are inter-dependent. 
 For instance, you want to delete a method declaration with specific annotations and then update its usages with some boolean value. 
-Please refer to the `test-resources/java` for detailed examples. 
+Please refer to the `test-resources/java` for detailed examples.
 
+### Adding a new API usage
 
-<h3> Adding a new API usage </h3>
-
-The example below shows a usage of a feature flag API (`experiment.isTreated(STALE_FLAG)`), in a `if_statement`. 
+The example below shows a usage of a feature flag API (`experiment.isTreated(STALE_FLAG)`), in a `if_statement`.
 ```
 class PiranhaDemo {
 
@@ -332,11 +327,11 @@ A user can also define exclusion filters for a rule (`rules.constraints`). These
 
 At a higher level, we can say that - Piranha first selects AST nodes matching `rules.query`, excluding those that match **any of** the `rules.constraints.queries` (within `rules.constraints.matcher`). It then replaces the node identified as `rules.replace_node` with the formatted (using matched tags) content of `rules.replace`.
 
-<h3> Parameterizing the behavior of the feature flag API </h3>
+### Parameterizing the behavior of the feature flag API
 
 The `rule` contains `holes` or template variables that need to be instantiated.
 For instance, in the above rule `@treated` and `@stale_flag_name` need to be replaced with some concrete value so that the rule matches only the feature flag API usages corresponding to a specific flag, and replace it specifically with `true` or `false`.  To specify such a behavior,
-user should create a `piranha_arguments.toml` file as shown below (assuming that the behavior of STALE_FLAG is **treated**): 
+user should create a `piranha_arguments.toml` file as shown below (assuming that the behavior of STALE_FLAG is **treated**):
 ```
 language = ["java"]
 substitutions = [
@@ -347,8 +342,7 @@ substitutions = [
 This file specifies that, the user wants to perform this refactoring for `java` files. 
 The `substitutions` field captures mapping between the tags and their corresponding concrete values. In this example, we specify that the tag named `stale_flag_name` should be replaced with `STALE_FLAG` and `treated` with `true`.
 
-
-<h3> Adding Cleanup Rules </h3>
+### Adding Cleanup Rules
 
 This section describes how to configure Piranha to support a new language. Users who do not intend to onboard a new language can skip this section.
 This section will describe how to encode cleanup rules that are triggered based on the update applied to the flag API usages.
