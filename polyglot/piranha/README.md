@@ -257,14 +257,15 @@ and [Adding Cleanup Rules](#adding-cleanup-rules).
 
 ### Adding support for a new feature flag system
 
-To onboard a new feature flag system users will have to specify the `<path-to-configurations>/rules.toml` and `<path-to-configurations>/edges.toml` files (look [here](/polyglot/piranha/src/cleanup_rules/java)). The `rules.toml` will contain rules that identify the usage of a feature flag system API. Defining `edges.toml` is required if your feature flag system API rules are inter-dependent. 
-For instance, you want to delete a method declaration with specific annotations and then update its usages with some boolean value. 
-Please refer to the `test-resources/java` for detailed examples.
+To onboard a new feature flag system users will have to specify the `<path-to-configurations>/rules.toml` and `<path-to-configurations>/edges.toml` files (look [here](/polyglot/piranha/src/cleanup_rules/java)). The `rules.toml` will contain rules that identify the usage of a feature flag system API. Defining `edges.toml` is required if your feature flag system API rules are inter-dependent.
+For instance, you want to delete a method declaration with specific annotations and then update its usages with some boolean value.
+Please refer to the [test-resources/java](/polyglot/piranha/test-resources/java) directory for detailed examples.
 
 ### Adding a new API usage
 
 The example below shows a usage of a feature flag API (`experiment.isTreated(STALE_FLAG)`), in a `if_statement`.
-```
+
+```java
 class PiranhaDemo {
 
     void demoMethod(ExperimentAPI experiment){
@@ -278,8 +279,10 @@ class PiranhaDemo {
     }
 }
 ```
-In the case when STALE_FLAG is treated, we would expect Piranha to refactor the code as shown below (assuming that `STALE_FLAG` is treated) : 
-```
+
+In the case when STALE_FLAG is treated, we would expect Piranha to refactor the code as shown below (assuming that `STALE_FLAG` is treated) :
+
+```java
 class PiranhaDemo {
 
     void demoMethod(ExperimentAPI experiment){
@@ -289,7 +292,9 @@ class PiranhaDemo {
     }
 }
 ```
-This can be achieved by adding a rule in the `input_rules.toml` file (as shown below) :
+
+This can be achieved by adding a rule in the `rules.toml` file (as shown below) :
+
 ```
 [[rules]]
 name = "Enum Based, toggle enabled"
@@ -312,26 +317,28 @@ replace = "@treated"
 groups = [ "replace_expression_with_boolean_literal"]
 holes = ["treated", "stale_flag_name"]
 ```
-This specifies a rule that matches against expressions like `exp.isTreated(SOME_FLAG_NAME)` and replaces it with `true` or `false`. 
-The `query` property of the rule contains a [tree-sitter query](https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries) that is matched against the source code. 
+
+This specifies a rule that matches against expressions like `exp.isTreated(SOME_FLAG_NAME)` and replaces it with `true` or `false`.
+The `query` property of the rule contains a [tree-sitter query](https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries) that is matched against the source code.
 The node captured by the tag-name specified in the `replace_node` property is replaced with the pattern specified in the `replace` property.
 The `replace` pattern can use the tags from the `query` to construct a replacement based on the match (like [regex-replace](https://docs.microsoft.com/en-us/visualstudio/ide/using-regular-expressions-in-visual-studio?view=vs-2022)).
 
-Each rule also contains the `groups` property, that specifies the kind of change performed by this rule. Based on this group, appropriate 
-cleanup will be performed by Piranha. For instance, `replace_expression_with_boolean_literal` will trigger deep cleanups to eliminate dead code (like eliminating `consequent` of a `if statement`) caused by replacing an expression with a boolean literal.
-Currently, Piranha provides deep clean-ups for edits that belong the groups - `replace_expression_with_boolean_literal`, `delete_statement`, and `delete_method`. Basically, by adding an appropriate entry to the groups, a user can hook up their rules to the pre-built cleanup rules.
+Each rule also contains the `groups` property, that specifies the kind of change performed by this rule. Based on this group, appropriate cleanup will be performed by Piranha.
+For instance, `replace_expression_with_boolean_literal` will trigger deep cleanups to eliminate dead code (like eliminating `consequent` of a `if statement`) caused by replacing an expression with a boolean literal.
+Currently, Piranha provides deep clean-ups for edits that belong to the groups - `replace_expression_with_boolean_literal`, `delete_statement`, and `delete_method`. Basically, by adding an appropriate entry to the groups, a user can hook up their rules to the pre-built cleanup rules.
 
-Adding `"Cleanup Rule"` to the `groups` which ensures that the user defined rule is treated as a cleanup rule not as a seed rule (For more details refer to `demo/find_replace_custom_cleanup`). 
+Adding `"Cleanup Rule"` to a rule's `groups` ensures that the user defined rule is treated as a cleanup rule, i.e., not as a seed rule (For more details refer to [`demo/find_replace_custom_cleanup/`](/demo/find_replace_custom_cleanup/)).
 
-A user can also define exclusion filters for a rule (`rules.constraints`). These constraints allow matching against the context of the primary match. For instance, we can write a rule that matches the expression `new ArrayList<>()` and exclude all instances that do not occur inside static methods (For more details, refer to the `demo/match_only`). 
+A user can also define exclusion filters for a rule (`rules.constraints`). These constraints allow matching against the context of the primary match. For instance, we can write a rule that matches the expression `new ArrayList<>()` and exclude all instances that do not occur inside static methods (For more details, refer to the [`demo/match_only/java/`](/demo/match_only/java/)).
 
 At a higher level, we can say that - Piranha first selects AST nodes matching `rules.query`, excluding those that match **any of** the `rules.constraints.queries` (within `rules.constraints.matcher`). It then replaces the node identified as `rules.replace_node` with the formatted (using matched tags) content of `rules.replace`.
 
 ### Parameterizing the behavior of the feature flag API
 
-The `rule` contains `holes` or template variables that need to be instantiated.
-For instance, in the above rule `@treated` and `@stale_flag_name` need to be replaced with some concrete value so that the rule matches only the feature flag API usages corresponding to a specific flag, and replace it specifically with `true` or `false`.  To specify such a behavior,
-user should create a `piranha_arguments.toml` file as shown below (assuming that the behavior of STALE_FLAG is **treated**):
+A `rule` contains `holes`, or template variables, that need to be instantiated.
+For instance, in the above rule, `@treated` and `@stale_flag_name` need to be replaced with some concrete value. Thus, the rule matches only the feature flag API usages corresponding to a specific flag and replaces it specifically with `true` or `false`.
+To specify such a behavior, the user should create a `piranha_arguments.toml` file as shown below (assuming that the behavior of STALE_FLAG is **treated**):
+
 ```
 language = ["java"]
 substitutions = [
@@ -339,15 +346,17 @@ substitutions = [
     ["treated", "true"]
 ]
 ```
-This file specifies that, the user wants to perform this refactoring for `java` files. 
-The `substitutions` field captures mapping between the tags and their corresponding concrete values. In this example, we specify that the tag named `stale_flag_name` should be replaced with `STALE_FLAG` and `treated` with `true`.
+
+This file specifies that the user wants to perform this refactoring for `java` files.
+The `substitutions` field captures the mapping between the tags and their corresponding concrete values. In this example, we specify that the tag named `stale_flag_name` should be replaced with `STALE_FLAG` and `treated` with `true`.
 
 ### Adding Cleanup Rules
 
 This section describes how to configure Piranha to support a new language. Users who do not intend to onboard a new language can skip this section.
 This section will describe how to encode cleanup rules that are triggered based on the update applied to the flag API usages.
-These rules should perform cleanups like simplifying boolean expressions, or if statements when the condition is constant, or deleting empty interfaces, or in-lining variables.
-For instance, the below example shows a rule that simplifies a `or` operation where its `RHS` is true. 
+These rules should perform cleanups like simplifying boolean expressions, or if statements when the condition is a constant, or deleting empty interfaces, or in-lining variables.
+For instance, the below example shows a rule that simplifies a `or` operation where its `RHS` is true.
+
 ```
 [[rules]]
 name = "Or - right operand is True"
@@ -363,12 +372,11 @@ replace_node = "b"
 replace = "true"
 ```
 
-Currently, Piranha picks up the language specific configurations from `src/cleanup_rule/<language>`.
-
+Currently, Piranha picks up the language specific configurations from [`src/cleanup_rules/<language>`](/src/cleanup_rules/).
 
 <h5> Example </h5>
 
-Let's consider an example where we want to define a cleanup for the scenario where 
+Let's consider an example where we want to define a cleanup for the scenario where
 <table>
 <tr>
 <td> Before </td> <td> After </td>
@@ -399,54 +407,55 @@ int foobar(){
 </td>
 </table>
 
-We would first define flag API rules as discussed in the section [Adding Support for a new language](#adding-support-for-a-new-language). Assuming this rule replaces the occurrence of the flag API corresponding to `SOME_STALE_FLAG` with `true`; we would have to define more cleanup rules as follows:
+We would first define the flag API rules as discussed in the section [Adding Support for a new feature flag system](#adding-support-for-a-new-feature-flag-system). Assuming this rule replaces the occurrence of the flag API corresponding to `SOME_STALE_FLAG` with `true`; we would have to define more cleanup rules as follows:
 
-* `R0`: Deletes the enclosing variable declaration (i.e. `x`) (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml):`delete_variable_declarations`)
-* `R1`: replace the identifier with the RHS of the deleted variable declaration, within the body of the enclosing method where `R0` was applied i.e. replace `x` with `true` within the method body of `foobar`. (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml):`replace_expression_with_boolean_literal`) 
-* `R2`: simplify the boolean expressions, for example replace `true || someCondition()` with `true`, that encloses the node where `R1` was applied. (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `true_or_something`)
-* `R3`: eliminate the enclosing if statement with a constant condition where `R2` was applied (`if (true) { return 100;}` → `return 100;`). E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `simplify_if_statement_true, remove_unnecessary_nested_block`
-* `R4`: eliminate unreachable code (`return 0;` in `return 100; return 0;`) in the enclosing block where `R3` was applied. (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `delete_all_statements_after_return`)
+* `R0`: deletes the enclosing variable declaration (i.e. `x`) (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml):`delete_variable_declaration`)
+* `R1`: replaces the identifier with the RHS of the deleted variable declaration, within the body of the enclosing method where `R0` was applied i.e. replace `x` with `true` within the method body of `foobar`. (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml):`replace_expression_with_boolean_literal`)
+* `R2`: simplifies the boolean expressions, for example replace `true || someCondition()` with `true`, that encloses the node where `R1` was applied. (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `simplify_true_or_something`)
+* `R3`: eliminates the enclosing if statement with a constant condition where `R2` was applied (`if (true) { return 100;}` → `return 100;`). E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `simplify_if_statement_true, remove_unnecessary_nested_block`
+* `R4`: eliminates unreachable code (`return 0;` in `return 100; return 0;`) in the enclosing block where `R3` was applied. (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `delete_all_statements_after_return`)
 
-The fact that `R2` has to be applied to the enclosing node where `R1` was applied, is expressed by specifying the `edges.toml` file. 
+To denote that `R2` has to be applied to the enclosing node where `R1` was applied, one specifies an edge with the `Parent` scope in the `edges.toml` file.
 
 To define how these cleanup rules should be chained, one needs to specify edges (e.g. the [java-edges](/polyglot/piranha/src/cleanup_rules/java/edges.toml) file) between the groups and (or) individual rules.
 The edges can be labelled as `Parent`, `Global` or even much finer scopes like `Method` or `Class` (or let's say `functions` in `go-lang`).
+
 * A `Parent` edge implies that after Piranha applies the `"from"` rule to update the node `n1` in the AST to node `n2`, Piranha tries to apply `"to"` rules on any ancestor of `"n2"` (e.g. `R1` → `R2`, `R2` → `R3`, `R3` → `R4`)
 * A `Method` edge implies that after Piranha applies the `"from"` rule to update the node `n1` in the AST to node `n2`, Piranha tries to apply `"to"` rules within the enclosing method's body. (e.g. `R0` → `R1`)
 * A `Class` edge implies that after Piranha applies the `"from"` rule to update the node `n1` in the AST to node `n2`, Piranha tries to apply `"to"` rules within the enclosing class body. (e.g. in-lining a private field)
 * A `Global` edge implies that after Piranha applies the `"from"` rule to update the node `n1` in the AST to node `n2`, Piranha tries to apply `"to"` rules in the entire code base. (e.g. in-lining a public field).
 
-`scope_config.toml` file specifies how to capture these fine-grained scopes like `method`, `function`, `lambda`, `class`.
-First decide, what scopes you need to capture, for instance, in Java we capture "Method" and "Class" scopes. Once, you decide the scopes construct scope query generators similar to [java-scope_config](/polyglot/piranha/src/cleanup_rules/java/scope_config.toml). Each scope query generator has two parts - (i) `matcher` is a tree-sitter query that matches the AST for the scope, and (ii) `generator` is a tree-sitter query with holes that is instantiated with the code snippets corresponding to tags when `matcher` is matched.
+The `scope_config.toml` file specifies how to capture these fine-grained scopes like `method`, `function`, `lambda`, `class`.
+First, decide what scopes you need to capture. For instance, in Java we capture "Method" and "Class" scopes. Once you decide the scopes, construct scope query generators similar to [java-scope_config](/polyglot/piranha/src/cleanup_rules/java/scope_config.toml). Each scope query generator has two parts - (i) `matcher` is a tree-sitter query that matches the AST for the scope, and (ii) `generator` is a tree-sitter query with holes that is instantiated with the code snippets corresponding to tags when `matcher` is matched.
 
+## Piranha Arguments
 
-## Piranha Arguments 
+The purpose of Piranha Arguments is determining the behavior of Piranha.
 
-The purpose of Piranha Arguments is determining the behavior of Piranha. 
-- `language` : The programming language used by the source code 
+- `language` : The programming language used by the source code.
 - `substitutions` : Seed substitutions for the rules (if any). In case of stale feature flag cleanup, we pass the stale feature flag name and whether it is treated or not.
-- `delete_file_if_empty` : enables delete file if it consequently becomes empty
--  `delete_consecutive_new_lines` : enables deleting consecutive empty new line  
--  `cleanup_comments` : enables cleaning up the comments associated to the deleted code elements like fields, methods or classes 
--  `cleanup_comments_buffer` : determines how many lines above to look up for a comment. 
-
-
-
+- `delete_file_if_empty` : enables deleting a file if it consequently becomes empty.
+- `delete_consecutive_new_lines` : enables deleting consecutive empty new lines.
+- `cleanup_comments` : enables cleaning up the comments associated to the deleted code elements like fields, methods or classes.
+- `cleanup_comments_buffer` : determines how many lines above to look up for a comment.
 
 ## Contributing
 
 <h4> Naming conventions for the rules </h4>
 
-* We name the rules in the format - <verb>_<ast_kind>. E.g., `delete_method_declaration` or `replace_expression with_boolean_literal`
-* We name the dummy rules in the format - `<ast_kind>_cleanup` E.g. `statement_cleanup` or `boolean_literal_cleanup`. Using dummy rules (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `boolean_literal_cleanup`) makes it easier and cleaner when specifying the flow between rules.
+* We name the rules using the format - `<verb>_<ast_kind>`. E.g., `delete_method_declaration` or `replace_expression with_boolean_literal`
+* We name the dummy rules using the format - `<ast_kind>_cleanup` E.g. `statement_cleanup` or `boolean_literal_cleanup`. Using dummy rules (E.g. [java-rules](/polyglot/piranha/src/cleanup_rules/java/rules.toml): `boolean_literal_cleanup`) makes it easier and cleaner when specifying the flow between rules.
 
 <h4> Writing tests </h4>
 
-Currently we maintain 
-* Unit tests for the internal functionality can be found under `<models|utilities>/unit_test`.
-* End-to-end tests for the configurations execute  Piranha on the test scenarios in `test-resources/<language>/input` and check if the output is as expected (`test-resources/<language>/expected_treated` and `test-resources/<language>/expected_control`).
+Currently we maintain:
 
-To add new scenarios to the existing tests for a given language, you can add them to new file in the `input` directory and then create similarly named files with the expected output in `expected_treated` and `expected_control` directory.
-Update the `piranha_arguments_treated.toml` and `piranha_arguments_control.toml` files too.
+* Unit tests for the internal functionality can be found under `src/<models|utilities>/unit_test`.
+* End-to-end tests for the configurations that execute Piranha on the test scenarios in `test-resources/<language>/<scenario>/input` and check if the output is as expected (`test-resources/<language>/<scenario>/expected` and `test-resources/<language>/<scenario>/expected`). 
 
-To add tests for a new language, please add a new `<language>` folder inside `test-resources/` and populate the `input`, `expected_treated` and `expected_control` directories appropriately.
+End-to-end tests for feature flag systems follow the structure `test-resources/<language>/<feature_flag_system_n>/<control|treated>/`.
+
+To add new scenarios to the existing tests for a given language, you can add them to a new file in the `input` directory and then create similarly named files with the expected output in the `expected` directory.
+Remember to also update the `piranha_arguments.toml` file in the `configurations/` directory.
+
+To add tests for a new language, please add a new `<language>` folder inside `test-resources/` and populate the `input` and `expected` and directories appropriately for each `<scenario>`.
