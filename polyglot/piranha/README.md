@@ -114,11 +114,11 @@ Polyglot Piranha can be used as a python library or as a command line tool.
 
 `pip install polyglot-piranha`
 
-Currently, we support one simple API (`run_piranha_cli`) that wraps the command line usage of Polyglot Piranha. We believe this makes it easy to incorporate Piranha in *"pipelining"*. 
+Currently, we support one simple API (`run_piranha_cli`) that wraps the command line usage of Polyglot Piranha. We believe this makes it easy to incorporate Piranha in *"pipelining"*.
 
 <h4> <code>run_piranha_cli</code></h4>
 
-```
+```python
 from polyglot_piranha import run_piranha_cli
 
 path_to_codebase = "..." 
@@ -127,30 +127,29 @@ piranha_summary = run_piranha_cli(path_to_codebase,
                                   path_to_configurations,
                                   should_rewrite_files=True)
 ```
+
 <h5> Arguments </h5>
 
-- `path_to_codebase` : Path to source code folder
-- `path_to_configuration` : A directory containing files named `piranha_arguments.toml`, `rules.toml` and optionally `edges.toml`
-  * `piranha_arguments.toml`: Allows a user to choose language (`java`, `kotlin`, ...), opt-in/out of other features like cleaning up comments, or even provide arguments to the piranha rules [reference](#piranha-arguments) 
-  * `rules.toml`: *piranha rules* expresses the specific AST patterns to match and __replacement patterns__ for these matches (in-place). These rules can also specify the pre-built language specific cleanups to trigger.
-  * `edges.toml` (_optional_): expresses the flow between the rules 
-- `should_rewrite_files` : Enables in-place rewriting of code 
+- `path_to_codebase` : Path to the source code directory.
+- `path_to_configuration` : A directory containing files named `piranha_arguments.toml`, `rules.toml` and optionally `edges.toml`.
+  - `piranha_arguments.toml`: Allows a user to choose a language (`java`, `kotlin`, ...), opt-in/out of other features like cleaning up comments, or even provide arguments to the piranha rules [reference](#piranha-arguments).
+  - `rules.toml`: *piranha rules* expresses the specific AST patterns to match and __replacement patterns__ for these matches (in-place). These rules can also specify the pre-built language specific cleanups to trigger.
+  - `edges.toml` (_optional_): expresses the flow between the rules.
+- `should_rewrite_files` : Enables in-place rewriting of code.
 
 <h5> Returns </h5>
 
-`[Piranha_Output]` : a [`PiranhaOutputSummary`](/polyglot/piranha/src/models/piranha_output.rs) for each file touched or analyzed by Piranha. It contains useful information like, matches found (for *match-only* rules), rewrites performed, and content of the file after the rewrite. The content is particularly useful when `should_rewrite_files` is passed as `false`. 
+`[Piranha_Output]` : a [`PiranhaOutputSummary`](/polyglot/piranha/src/models/piranha_output.rs) for each file touched or analyzed by Piranha. It contains useful information like, matches found (for *match-only* rules), rewrites performed, and content of the file after the rewrite. The content is particularly useful when `should_rewrite_files` is passed as `false`.
 
 ### :computer: Command-line Interface
 
+Get platform-specific binaries in [releases](https://github.com/uber/piranha/releases) or build it from source by following the steps below:
 
-Get platform-specific binary from [releases](https://github.com/uber/piranha/releases) or build it from source following the below steps:
-
-* Install [Rust](https://www.rust-lang.org/tools/install)
-* `git clone https://github.com/uber/piranha.git` 
-* `cd piranha/polyglot/piranha`
-* `cargo build --release` (`cargo build --release --no-default-features` for macOS)
-* Binary will be generated under `target/release`
-
+* Install [Rust](https://www.rust-lang.org/tools/install).
+* `git clone https://github.com/uber/piranha.git`.
+* `cd piranha/polyglot/piranha`.
+* `cargo build --release` (`cargo build --release --no-default-features` for macOS).
+* Binary will be generated under `target/release`.
 
 ```
 Polyglot Piranha
@@ -176,7 +175,7 @@ OPTIONS:
 
 The output JSON is the serialization of- [`PiranhaOutputSummary`](/polyglot/piranha/src/models/piranha_output.rs) produced for each file touched or analyzed by Piranha.
 
-*It can be seen that the Python API is basically a wrapper around this command line interface.*
+*One can note that the Python API is basically a wrapper around this command line interface.*
 
 ### Languages supported
 
@@ -193,8 +192,7 @@ The output JSON is the serialization of- [`PiranhaOutputSummary`](/polyglot/pira
 | JavaScript       | :calendar:                  | :calendar:                               | :calendar:                           |
 | Strings Resource | :heavy_check_mark:          | :x:                                      | :x:                                  |
 
-Contributions for the :calendar: (`planned`) languages or any other languages are welcome :) 
-
+Contributions for the :calendar: (`planned`) languages or any other languages are welcome :)
 
 ## Getting Started with demos
 
