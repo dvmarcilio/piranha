@@ -26,12 +26,13 @@ __This repository contains the Polyglot Piranha framework and pre-built cleanup 
 </p>
 
 This is the higher level architecture of Polyglot Piranha. 
-At its heart, Polyglot Piranha is a structural find/replacement (rewrite) engine and pre-build language specific cleanup rules like - like simplifying boolean expressions, simplifying `if-else` statements, deleting empty class, deleting files with no type declarations, inline local variables, and many more. 
+At its heart, Polyglot Piranha is a structural find/replacement (rewrite) engine with pre-built language-specific cleanup rules like - simplifying boolean expressions, simplifying `if-else` statements, deleting empty class, deleting files with no type declarations, inline local variables, and many more.
+
 A user provides :
 - A set (or, a graph) of structural find/replace rules 
 - Path to the code base
-- [Arguments](#piranha-arguments) to modify Piranha's behavior (like deleting associated comments)
-When Piranha applies the set (or graph) of user defined rules, it triggers the __pre-built__ language specific cleanup rules to do a deep cleanup. 
+- [Arguments](#piranha-arguments) to modify Piranha's behavior (like deleting associated comments).
+When Piranha applies the set (or graph) of user defined rules, it triggers the __pre-built__ language specific cleanup rules to do a deep cleanup.
 
 ## When is Polyglot Piranha useful?
 
