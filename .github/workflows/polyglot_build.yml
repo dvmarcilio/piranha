@@ -13,32 +13,43 @@ jobs:
     steps:
       - name: Checkout Piranha sources
         uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: '.github/filters.yaml'
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         with:
           profile: minimal
           toolchain: stable
           override: true
           components: rustfmt, clippy
       - name: Build Piranha
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         run: cargo build
         working-directory: polyglot/piranha
       - name: Clippy check
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         run: cargo clippy
         working-directory: polyglot/piranha
       - run: cargo test
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         working-directory: polyglot/piranha
       - name: Set up Python 3.9
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: Create virtualenv and install dependencies
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         run: |
           python -m venv .env
           source .env/bin/activate
           pip install maturin pytest
         working-directory: polyglot/piranha
       - name: Run tests
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         run: |
           source .env/bin/activate
           maturin develop
