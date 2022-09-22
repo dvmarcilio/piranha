@@ -18,8 +18,13 @@ jobs:
           - target: x86_64-apple-darwin
             archive: zip
     steps:
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: .github/filters.yaml
       - uses: actions/checkout@master
       - name: Compile and release
+        if: ${{ steps.filter.outputs.polyglot == 'true' }}
         uses: rust-build/rust-build.action@v1.3.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
