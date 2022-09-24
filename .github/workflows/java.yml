@@ -8,6 +8,20 @@ on:
       - master
 
 jobs:
+  # runs change detection
+  # this job allows build to have a single if
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      java: ${{ steps.filter.outputs.java }}
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            java:
+              - java/**
+
   build:
     name: "JDK ${{ matrix.java }} on ${{ matrix.os }}"
     strategy:
@@ -26,20 +40,18 @@ jobs:
           #   java: 8
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    needs: changes
+    # always running when it's a push
+    # otherwise, only when modifications in java's dir
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.java == 'true' }}
     steps:
       - name: Check out Piranha sources
         uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: '.github/filters.yaml'
       - name: 'Set up JDK ${{ matrix.java }}'
-        if: ${{ steps.filter.outputs.java == 'true' }}
         uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
       - name: Build and test using Gradle and Java
-        if: ${{ steps.filter.outputs.java == 'true' }}
         uses: eskatos/gradle-command-action@v1
         with:
           build-root-directory: ./java
@@ -54,4 +66,4 @@ jobs:
           wrapper-directory: ./java
           arguments: jacocoTestReport coverallsJacoco
         continue-on-error: true
-        if: steps.filter.outputs.java == 'true' && runner.os == 'Linux' && matrix.java == '8' && github.repository == 'uber/piranha'
+        if: runner.os == 'Linux' && matrix.java == '8' && github.repository == 'uber/piranha'
