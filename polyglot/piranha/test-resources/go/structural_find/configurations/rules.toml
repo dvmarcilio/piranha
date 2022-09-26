@@ -1,0 +1,33 @@
+# Copyright (c) 2022 Uber Technologies, Inc.
+#
+# <p>Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of the License at
+# <p>http://www.apache.org/licenses/LICENSE-2.0
+#
+# <p>Unless required by applicable law or agreed to in writing, software distributed under the
+# License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# For @flag_name = "staleFlag" will match calls `experimentation.Enabled("staleFlag")`
+#
+[[rules]]
+name = "find_experimentation_Enabled_with_flag_name"
+query = """
+(
+    (call_expression
+        function: (selector_expression
+            operand: (identifier) @func_id
+            field: (field_identifier) @func_field
+        )
+        arguments: (argument_list
+            (interpreted_string_literal) @str_arg
+        )
+    ) @call_exp
+    (#eq? @func_id "experimentation")
+    (#eq? @func_field "Enabled")
+    (#eq? @str_arg "\\"@flag_name\\"")
+)
+"""
+holes = ["flag_name"]
