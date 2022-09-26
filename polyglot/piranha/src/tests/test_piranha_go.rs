@@ -11,9 +11,18 @@ Copyright (c) 2022 Uber Technologies, Inc.
  limitations under the License.
 */
 
-use super::{initialize, run_match_test};
+use super::{initialize, run_match_test, run_rewrite_test};
 
 static LANGUAGE: &str = "go";
+
+#[test]
+fn test_go_find_replace() {
+  initialize();
+  run_rewrite_test(
+    &format!("{}/{}", LANGUAGE, "find_replace"),
+    1,
+  );
+}
 
 #[test]
 fn test_go_match_only() {
