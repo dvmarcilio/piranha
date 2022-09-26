@@ -20,6 +20,8 @@ npm i
 
 To test your installation, run `npm test` and ensure all tests pass.
 
+trigger ci job.
+
 ## Usage
 
 PiranhaJS can be configured to recognize different flag APIs and flag behaviours by specifying a `properties.json` file and the appropriate command line options. Run `node src/piranha.js -h` to see a list of command line options Piranha accepts. 
