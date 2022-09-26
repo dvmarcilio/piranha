@@ -24,8 +24,16 @@ def python_demo():
     The purpose of having `empty_list` is to demonstrate that the empty list assignment is only triggered as a consequence of the seed rule.
     Finally, replaces the string literal `@str_to_replace` with `@str_replacement` (from `substitutions` in `piranha_arguments.toml`) if it appears as a list element.
     """
-    print("Running the Find/Replace Custom Cleanup demo for Python")
+    info("Running the Find/Replace Custom Cleanup demo for Python")
     _ = run_piranha_cli(join(find_Replace_dir, "python"), join(find_Replace_dir, "python/configurations"), True)
+
+def go_demo():
+    """
+    Replace `fmt.Print("String\n")` with `fmt.Println("String")`.
+    We define a rule to remove a trailing `\n` in a call to `fmt.Print` which then triggers the replacement of `Print` with `Println`.
+    """
+    info("Running the Find/Replace Custom Cleanup demo for Go")
+    _ = run_piranha_cli(join(find_Replace_dir, "go"), join(find_Replace_dir, "go/configurations"), True)
 
 FORMAT = '%(levelname)s %(name)s %(asctime)-15s %(filename)s:%(lineno)d %(message)s'
 logging.basicConfig(format=FORMAT)
@@ -33,4 +41,5 @@ logging.getLogger().setLevel(logging.INFO)
 
 java_demo()
 python_demo()
+go_demo()
 info("Completed running the Find/Replace Custom Cleanup demos")
