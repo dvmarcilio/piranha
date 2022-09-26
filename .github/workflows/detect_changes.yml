@@ -1,0 +1,20 @@
+name: Detect Changes
+
+on:
+  workflow_call:
+
+jobs:
+  # runs change detection
+  # this job allows build to have a single if
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      java: ${{ steps.filter.outputs.java }}
+      js: ${{ steps.filter.outputs.js }}
+      polyglot: ${{ steps.filter.outputs.polyglot }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: '.github/filters.yaml'
