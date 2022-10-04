@@ -1,0 +1,20 @@
+[[rules]]
+name = "var_decl_before_go_stmt"
+query = """
+(
+    (for_statement
+        body: 
+        (block
+        	(statement_list
+              .
+              (short_var_declaration) @v_decl1
+              .
+              (short_var_declaration) @v_decl2
+              .
+              (go_statement) @go_stmt
+              .
+            ) @stmts
+        ) @block
+    ) @for_stmt
+)
+"""

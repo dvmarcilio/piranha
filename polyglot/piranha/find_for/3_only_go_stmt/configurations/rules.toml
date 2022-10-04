@@ -1,0 +1,18 @@
+[[rules]]
+name = "only_go_stmt"
+query = """
+(
+    (for_statement
+        body: 
+        (block
+        	(statement_list
+              (statement)* @stmts_before
+              (go_statement) @go_stmt
+              (statement)* @stmts_after
+            ) @stmts
+        ) @block
+    ) @for_stmt
+    (#eq? @stmts_before "")
+    (#eq? @stmts_after "")
+)
+"""

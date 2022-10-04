@@ -1,0 +1,6 @@
+.env/
+__pycache__/
+*.csv
+revision.txt
+time.txt
+sample-analysis.md

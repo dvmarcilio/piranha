@@ -1,0 +1,55 @@
+[[rules]]
+# has stmts before *and* after
+name = "strict_surrounded_go_stmt"
+query = """
+(
+    (for_statement
+        body:
+        (block
+        	(statement_list
+              (statement)+ @stmts_before
+              (go_statement) @go_stmt
+              (statement)+ @stmts_after
+            ) @stmts
+        ) @block
+    ) @for_stmt
+)
+"""
+
+[[rules]]
+# has stmts only before
+name = "only_before_go_stmt"
+query = """
+(
+    (for_statement
+        body:
+        (block
+        	(statement_list
+              (statement)+ @stmts_before
+              (go_statement) @go_stmt
+              (statement)* @stmts_after
+            ) @stmts
+        ) @block
+    ) @for_stmt
+    (#eq? @stmts_after "")
+)
+"""
+
+[[rules]]
+# has stmts only after
+name = "only_after_go_stmt"
+query = """
+(
+    (for_statement
+        body:
+        (block
+        	(statement_list
+              (statement)* @stmts_before
+              (go_statement) @go_stmt
+              (statement)+ @stmts_after
+            ) @stmts
+        ) @block
+    ) @for_stmt
+    (#eq? @stmts_before "")
+)
+"""

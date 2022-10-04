@@ -1,0 +1,9 @@
+# Somewhat equivalent to regex `^\s+for .+\{$`
+#
+[[rules]]
+name = "find_for"
+query = """
+(
+    (for_statement) @for_stmt
+)
+"""

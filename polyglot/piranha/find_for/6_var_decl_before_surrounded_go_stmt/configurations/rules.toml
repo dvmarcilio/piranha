@@ -1,0 +1,64 @@
+[[rules]]
+name = "var_decl_before_strict_surrounded_go_stmt"
+query = """
+(
+    (for_statement
+        body:
+        (block
+        	(statement_list
+              .
+              (short_var_declaration) @v_decl1
+              .
+              (short_var_declaration) @v_decl2
+              (statement)+ @stmts_before
+              (go_statement) @go_stmt
+              (statement)+ @stmts_after
+            ) @stmts
+        ) @block
+    ) @for_stmt
+)
+"""
+
+[[rules]]
+name = "var_decl_before_stmts_before_go_stmt"
+query = """
+(
+    (for_statement
+        body:
+        (block
+        	(statement_list
+              .
+              (short_var_declaration) @v_decl1
+              .
+              (short_var_declaration) @v_decl2
+              (statement)+ @stmts_before
+              (go_statement) @go_stmt
+              (statement)* @stmts_after
+            ) @stmts
+        ) @block
+    ) @for_stmt
+    (#eq? @stmts_after "")
+)
+"""
+
+[[rules]]
+name = "var_decl_before_stmts_after_go_stmt"
+query = """
+(
+    (for_statement
+        body:
+        (block
+        	(statement_list
+              .
+              (short_var_declaration) @v_decl1
+              .
+              (short_var_declaration) @v_decl2
+              (statement)* @stmts_before
+              (go_statement) @go_stmt
+              (statement)+ @stmts_after
+            ) @stmts
+        ) @block
+    ) @for_stmt
+    (#eq? @stmts_before "")
+)
+"""

@@ -1,0 +1,10 @@
+[[rules]]
+name = "any_go_stmt_in_for"
+query = """
+(
+    (go_statement) @go_stmt
+)
+"""
+[[rules.constraints]]
+matcher = "(for_statement) @fs"
+queries=[]
