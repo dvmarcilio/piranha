@@ -1,0 +1,15 @@
+[[rules]]
+name = "go_stmt"
+query = """
+(
+    (go_statement) @go_stmt
+)
+"""
+
+[[rules]]
+name = "short_v_decl"
+query = """
+(
+    (short_var_declaration) @short_v_decl
+)
+"""
