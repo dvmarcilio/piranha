@@ -1,3 +1,5 @@
+ #!/usr/bin/env python3
+
 from dataclasses import dataclass
 import datetime
 import os
@@ -53,19 +55,30 @@ class Range:
         return self.s_point.row > other_range.s_point.row and \
             self.e_point.row < other_range.e_point.row
 
-    def after(self, other_range: 'Range') -> bool:
+    def after(self, other: 'Range') -> bool:
         """
         Assumes that each Range will be in different lines.
         """
-        return self.s_point.row > other_range.s_point.row and \
-            self.e_point.row > other_range.e_point.row
+        return self.s_point.row > other.s_point.row and \
+            self.e_point.row > other.e_point.row
 
-    def strict_within(self, other_range: 'Range') -> bool:
-        """
+    def strict_within(self, other: 'Range') -> bool:
+        return self.starts_just_after(other) and self.ends_just_before(other)
 
-        """
-        return self.s_point.row == other_range.s_point.row + 1 and \
-            self.e_point.row == other_range.e_point.row - 1
+    def start_row_eq(self, row: int) -> bool:
+        return self.s_point.row == row
+
+    def start_row(self) -> int:
+        return self.s_point.row
+
+    def after_n_lines(self, other: 'Range', n_lines: int) -> bool:
+        return self.s_point.row == other.s_point.row + n_lines
+
+    def starts_just_after(self, other: 'Range') -> bool:
+        return self.after_n_lines(other, 1)
+
+    def ends_just_before(self, other: 'Range') -> bool:
+        return self.e_point.row == other.e_point.row - 1
 
 def row_col(point) -> 'tuple[int, int]':
     return point.row, point.column
@@ -211,7 +224,7 @@ def go_stmts_and_short_v_decls_ranges(piranha_summary) -> 'tuple[list[Range], li
 
     return go_stmts_ranges, short_var_decls_ranges
 
-def append_to_csv(rows: 'list[CsvRow]', csv_path: str):
+def append_rows_to_csv(rows: 'list[CsvRow]', csv_path: str):
     should_write_header = not os.path.exists(csv_path)
 
     with open(csv_path, 'a+') as output_file:
@@ -227,7 +240,6 @@ def append_to_csv(rows: 'list[CsvRow]', csv_path: str):
 
         for row in rows:
             writer.writerow(row.raw_csv_row())
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('codebase_path', type=str)
@@ -259,8 +271,13 @@ with open(revision_file_path, 'w+') as f:
 
 for_ranges_dict: 'dict[str, list[Range]]' = run_and_write_for_base_pattern()
 
-within_csv = base_output_path + '2_any_go_stmt.csv'
-strict_within_csv = base_output_path + '3_only.csv'
+
+# write everything in one csv? multiple ones?
+p2_csv = base_output_path + '2_any_go_stmt.csv'
+p3_csv = base_output_path + '3_only.csv'
+p4_csv = base_output_path + '4_surrounded.csv'
+p5_csv = base_output_path + '5_strict_before.csv'
+p6_csv = base_output_path + '6_before.csv'
 
 # could be more effective if we ran piranha only on the for_stmt lines
 ## extract the whole for_stmt
@@ -284,20 +301,52 @@ for file_path, for_ranges_list in for_ranges_dict.items():
     ## for loops should be higher than go_stmts
 
     # ranges are returned in reversed order
-    within = []
-    strict_within = []
+    p2_rows = []
+    p3_rows = []
+    p4_rows = []
+    p5_rows = []
+    p6_rows = []
 
     for for_range in reversed(for_ranges_list):
+
+        within_short_vdecl_ranges = []
+        for s_vdecl_range in reversed(short_var_decls_ranges):
+            if s_vdecl_range.after(for_range):
+                # avoid looking into others: ranges are ordered
+                break
+
+            if s_vdecl_range.within(for_range):
+                within_short_vdecl_ranges.append(s_vdecl_range)
+
+        if len(within_short_vdecl_ranges) >= 2 and \
+                within_short_vdecl_ranges[0].starts_just_after(for_range) and \
+                within_short_vdecl_ranges[1].after_n_lines(for_range, 2):
+            starting_short_vdecl_ranges = [within_short_vdecl_ranges[0], within_short_vdecl_ranges[1]]
+        else:
+            starting_short_vdecl_ranges = []
 
         for go_range in reversed(go_stmts_ranges):
             if go_range.after(for_range):
                 # avoid looking into others: ranges are ordered
                 break
 
-            if go_range.strict_within(for_range):
-                strict_within.append(CsvRow.from_range(file_path, 'only_go_stmt', go_range))
-            elif go_range.within(for_range):
-                within.append(CsvRow.from_range(file_path, 'any_go_stmt_in_for', go_range))
+            if go_range.within(for_range):
+                p2_rows.append(CsvRow.from_range(file_path, 'any_go_stmt_in_for', go_range))
 
-    append_to_csv(within, within_csv)
-    append_to_csv(strict_within, strict_within_csv)
+                if go_range.strict_within(for_range):
+                    p3_rows.append(CsvRow.from_range(file_path, 'only_go_stmt', go_range))
+                elif starting_short_vdecl_ranges and \
+                        go_range.starts_just_after(starting_short_vdecl_ranges[1]) and \
+                        go_range.ends_just_before(for_range):
+                    # pattern 5
+                    p5_rows.append(CsvRow.from_range(file_path, 'strict_before', go_range))
+                elif starting_short_vdecl_ranges:
+                    p6_rows.append(CsvRow.from_range(file_path, 'before', go_range))
+                else:
+                    p4_rows.append(CsvRow.from_range(file_path, 'surrounded', go_range))
+
+    append_rows_to_csv(p2_rows, p2_csv)
+    append_rows_to_csv(p3_rows, p3_csv)
+    append_rows_to_csv(p4_rows, p4_csv)
+    append_rows_to_csv(p5_rows, p5_csv)
+    append_rows_to_csv(p6_rows, p6_csv)
