@@ -185,35 +185,14 @@ def run_and_write_for_base_pattern() -> 'dict[str, list[Range]]':
 
     return summary_ranges_dict(piranha_summary)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('codebase_path', type=str)
-parser.add_argument('output_path', type=str, nargs="?")
-args = parser.parse_args()
-
-base_path = os.path.join(os.path.dirname(__file__))
-codebase_path = args.codebase_path
-
-base_output_path = ''
-if not args.output_path:
-    time_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    base_output_path = os.path.join(base_path, 'output_' + time_str + '/')
-else:
-    base_output_path = os.path.abspath(args.output_path) + '/'
-
-if not os.path.exists(base_output_path):
-    os.mkdir(base_output_path)
-
-print(f'base output path: {base_output_path}', flush=True)
-
-base_output_file_path = base_output_path + '1_for_loops.csv'
-revision_file_path = base_output_path + 'revision.txt'
-with open(revision_file_path, 'w+') as f:
-    rev = subprocess.check_output(cwd=os.path.dirname(codebase_path),
-                                  args=['git', 'rev-parse',
-                                        'HEAD']).decode('ascii').strip()
-    f.write(rev)
-
-for_ranges_dict: 'dict[str, list[Range]]' = run_and_write_for_base_pattern()
+def collect_paths_from_csv(csv_path: str) -> 'set[str]':
+    paths: 'list[str]' = []
+    with open(csv_path) as f:
+        reader = csv.reader(f)
+        next(reader)  # skip header
+        for row in reader:
+            paths.append(row[0])
+    return set(paths)
 
 def go_stmts_and_short_v_decls_ranges(piranha_summary) -> 'tuple[list[Range], list[Range]]':
     go_stmts_ranges: 'list[Range]' = []
@@ -249,6 +228,37 @@ def append_to_csv(rows: 'list[CsvRow]', csv_path: str):
         for row in rows:
             writer.writerow(row.raw_csv_row())
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('codebase_path', type=str)
+parser.add_argument('output_path', type=str, nargs="?")
+args = parser.parse_args()
+
+base_path = os.path.join(os.path.dirname(__file__))
+codebase_path = args.codebase_path
+
+base_output_path = ''
+if not args.output_path:
+    time_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    base_output_path = os.path.join(base_path, 'output_' + time_str + '/')
+else:
+    base_output_path = os.path.abspath(args.output_path) + '/'
+
+if not os.path.exists(base_output_path):
+    os.mkdir(base_output_path)
+
+print(f'base output path: {base_output_path}', flush=True)
+
+base_output_file_path = base_output_path + '1_for_loops.csv'
+revision_file_path = base_output_path + 'revision.txt'
+with open(revision_file_path, 'w+') as f:
+    rev = subprocess.check_output(cwd=os.path.dirname(codebase_path),
+                                  args=['git', 'rev-parse',
+                                        'HEAD']).decode('ascii').strip()
+    f.write(rev)
+
+for_ranges_dict: 'dict[str, list[Range]]' = run_and_write_for_base_pattern()
+
 within_csv = base_output_path + '2_any_go_stmt.csv'
 strict_within_csv = base_output_path + '3_only.csv'
 
@@ -276,6 +286,7 @@ for file_path, for_ranges_list in for_ranges_dict.items():
     # ranges are returned in reversed order
     within = []
     strict_within = []
+
     for for_range in reversed(for_ranges_list):
 
         for go_range in reversed(go_stmts_ranges):
@@ -284,9 +295,9 @@ for file_path, for_ranges_list in for_ranges_dict.items():
                 break
 
             if go_range.strict_within(for_range):
-                strict_within.append(CsvRow.from_range(file_path, 'strict_within', go_range))
+                strict_within.append(CsvRow.from_range(file_path, 'only_go_stmt', go_range))
             elif go_range.within(for_range):
-                within.append(CsvRow.from_range(file_path, 'within', go_range))
+                within.append(CsvRow.from_range(file_path, 'any_go_stmt_in_for', go_range))
 
     append_to_csv(within, within_csv)
     append_to_csv(strict_within, strict_within_csv)
