@@ -21,6 +21,21 @@ class CsvRow:
     end_col: int
     rule_name: str
 
+    @classmethod
+    def from_range(cls, file: str, rule_name: str, r: 'Range') -> 'CsvRow':
+        return CsvRow(
+            file=file, rule_name=rule_name,
+            start_row=r.s_point.row, start_col=r.s_point.col,
+            end_row=r.e_point.row, end_col=r.e_point.col,
+        )
+
+    def raw_csv_row(self):
+        return [
+            self.file,
+            self.start_row, self.start_col,
+            self.end_row, self.end_col,
+            self.rule_name,
+        ]
 @dataclass(eq=True, frozen=True)
 class Point:
     row: int
@@ -55,7 +70,7 @@ class Range:
 def row_col(point) -> 'tuple[int, int]':
     return point.row, point.column
 
-def distinct_elements_from_list(lst: 'list[any]'):
+def distinct_elements_from_list(lst: 'list'):
     # adding to a dict discards duplicates
     # dict maintains insertion order
     return list(dict.fromkeys(lst))
@@ -217,11 +232,30 @@ def go_stmts_and_short_v_decls_ranges(piranha_summary) -> 'tuple[list[Range], li
 
     return go_stmts_ranges, short_var_decls_ranges
 
+def append_to_csv(rows: 'list[CsvRow]', csv_path: str):
+    should_write_header = not os.path.exists(csv_path)
+
+    with open(csv_path, 'a+') as output_file:
+        writer = csv.writer(output_file,
+                            delimiter=',',
+                            quotechar='"',
+                            quoting=csv.QUOTE_NONNUMERIC)
+
+        if should_write_header:
+            writer.writerow([
+                'file', 'start_row', 'start_col', 'end_row', 'end_col', 'rule_name'
+            ])
+
+        for row in rows:
+            writer.writerow(row.raw_csv_row())
+
+within_csv = base_output_path + '2_any_go_stmt.csv'
+strict_within_csv = base_output_path + '3_only.csv'
+
 # could be more effective if we ran piranha only on the for_stmt lines
 ## extract the whole for_stmt
 ## store temp file with it
 ## recalculate the line number
-count = 0
 for file_path, for_ranges_list in for_ranges_dict.items():
     config_path = os.path.join(base_path, 'v2/')
 
@@ -240,24 +274,19 @@ for file_path, for_ranges_list in for_ranges_dict.items():
     ## for loops should be higher than go_stmts
 
     # ranges are returned in reversed order
+    within = []
+    strict_within = []
     for for_range in reversed(for_ranges_list):
+
         for go_range in reversed(go_stmts_ranges):
             if go_range.after(for_range):
                 # avoid looking into others: ranges are ordered
                 break
 
             if go_range.strict_within(for_range):
-                count += 1
-                print('go range strict within')
-                print(file_path)
-                print(f'for_range: {for_range}')
-                print(f'go_range: {go_range}')
+                strict_within.append(CsvRow.from_range(file_path, 'strict_within', go_range))
             elif go_range.within(for_range):
-                count += 1
-                print('go range within for_range')
-                print(file_path)
-                print(f'for_range: {for_range}')
-                print(f'go_range: {go_range}')
+                within.append(CsvRow.from_range(file_path, 'within', go_range))
 
-            if count > 10:
-                raise Exception('break')
+    append_to_csv(within, within_csv)
+    append_to_csv(strict_within, strict_within_csv)
