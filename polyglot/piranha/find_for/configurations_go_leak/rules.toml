@@ -64,3 +64,19 @@ query = """
     (#match? @u_e "<-.+")
 )
 """
+
+[[rules]]
+name = "if_stmt"
+query = """
+(
+    (if_statement) @if_stmt
+)
+"""
+
+[[rules]]
+name = "select_stmt"
+query = """
+(
+    (select_statement) @select_stmt
+)
+"""

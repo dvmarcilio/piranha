@@ -1,19 +1,28 @@
 from dataclasses import dataclass
+import dataclasses
 import datetime
+import json
 import os
 import subprocess
-import sys
 from polyglot_piranha import run_piranha_cli
-import csv
 import argparse
-from dataclass_csv import DataclassReader
-from analysis_dataclasses import CsvRow, Range, Point
+from analysis_dataclasses import Range, Point
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
 
 
 @dataclass(eq=True, frozen=True)
 class FuncLiteral:
     range: Range
     send_stmts: 'list[Range]'
+    if_stmts: 'list[Range]'
+    select_stmts: 'list[Range]'
+    is_pattern2: bool
 
 
 @dataclass(eq=True, frozen=True)
@@ -31,8 +40,17 @@ class MethodDecl:
     return_stmt_after: 'list[Range]'
     channel_receive_after: 'list[Range]'
 
-    def chan_names(self):
+    def chan_names(self) -> 'list[str]':
         return [c.id for c in self.channels]
+
+    def is_pattern2(self) -> bool:
+        return any(fl.is_pattern2 for fl in self.func_literals)
+
+
+@dataclass(eq=True, frozen=True)
+class Pattern:
+    name: str
+    m_decl: MethodDecl
 
 
 def range_from_match_range(match_range) -> Range:
@@ -63,8 +81,8 @@ def ranges_dict(summary_matches) -> 'tuple[dict[str, list[Range]], list[Channel]
     return r_d, chans
 
 
-def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
-    m_decls: 'list[MethodDecl]' = []
+def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
+    patterns: 'list[Pattern]' = []
     for summary in piranha_summary:
         file_path: str = summary.path
         results = ranges_dict(summary.matches)
@@ -72,10 +90,8 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
         chans: 'list[Channel]' = results[1]
 
         if all([rule_name in ranges_by_rule for rule_name in mandatory_rule_names]):
-            print(f'all mandatory rules: {file_path}')
             for m_decl_range in ranges_by_rule['method_decl']:
                 func_literals: 'list[FuncLiteral]' = []
-                after_send_stmt_ranges: 'list[Range]' = []
 
                 for func_lit_range in ranges_by_rule['func_lit']:
                     # ordered by line, don't need to look ones that are after
@@ -84,18 +100,42 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
 
                     if func_lit_range.within(m_decl_range):
                         within_send_stmts: 'list[Range]' = []
+                        within_if_stmts: 'list[Range]' = []
+                        within_select_stmts: 'list[Range]' = []
+                        # duplication below for the 3
                         for send_stmt_range in ranges_by_rule['send_stmt']:
                             if send_stmt_range.after(func_lit_range):
                                 break
-
                             if send_stmt_range.within(func_lit_range):
                                 within_send_stmts.append(send_stmt_range)
-                                func_literals.append(
-                                    FuncLiteral(func_lit_range,
-                                                within_send_stmts)
-                                )
-                            elif send_stmt_range.after(func_lit_range):
-                                after_send_stmt_ranges.append(send_stmt_range)
+
+                        if 'if_stmt' in ranges_by_rule:
+                            for if_stmt_range in ranges_by_rule['if_stmt']:
+                                if if_stmt_range.after(func_lit_range):
+                                    break
+                                if if_stmt_range.within(func_lit_range):
+                                    within_if_stmts.append(if_stmt_range)
+
+                        if 'select_stmt' in ranges_by_rule:
+                            for select_stmt_range in ranges_by_rule['select_stmt']:
+                                if select_stmt_range.after(func_lit_range):
+                                    break
+                                if select_stmt_range.within(func_lit_range):
+                                    within_select_stmts.append(
+                                        select_stmt_range)
+
+                        # within_send is required
+                        if len(within_send_stmts) > 0:
+                            if_select_stmts = within_if_stmts + within_select_stmts
+                            is_pattern2 = False
+                            for send_statement in within_send_stmts:
+                                is_pattern2 = any(send_statement.within(
+                                    if_select) for if_select in if_select_stmts)
+                                if is_pattern2:
+                                    break
+
+                            func_literals.append(FuncLiteral(
+                                func_lit_range, within_send_stmts, within_if_stmts, within_select_stmts, is_pattern2))
 
                 if len(func_literals) > 0:
                     # method_declaration
@@ -145,11 +185,16 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
                         if len(chan_receives_after_rets) > 0:
                             m_d = MethodDecl(
                                 file_path, m_decl_range, chans_before_func_lits, func_literals, returns_after_func_lits, chan_receives_after_rets)
-                            m_decls.append(m_d)
-                            print(m_d)
-                            sys.exit(0)
 
-    return m_decls
+                            pattern_name: str = ''
+                            if chans_before_func_lits:
+                                pattern_name = 'advanced2' if m_d.is_pattern2() else 'advanced1'
+                            else:
+                                pattern_name = 'basic'
+
+                            patterns.append(Pattern(pattern_name, m_d))
+
+    return patterns
 
 
 parser = argparse.ArgumentParser()
@@ -188,8 +233,8 @@ mandatory_rule_names = [
     'chan_receive'
 ]
 
-m_decls: 'list[MethodDecl]' = []
-
+patterns: 'list[Pattern]' = []
+json_index = 0
 # ideally a root dir with several projects (dirs) as 1st level
 if os.path.isdir(codebase_path):
     sub_dirs = next(os.walk(codebase_path))[1]
@@ -198,11 +243,17 @@ if os.path.isdir(codebase_path):
         # print(f'Running for {dir_path}')
         piranha_summary = run_piranha_cli(
             dir_path, config_path, should_rewrite_files=False)
-        m_decls.extend(run_for_piranha_summary(piranha_summary))
+        curr_patterns = run_for_piranha_summary(piranha_summary)
+        patterns.extend(curr_patterns)
+        if len(curr_patterns) > 0:
+            with open(base_output_path + f'{json_index}.json', 'w') as f:
+                f.write(json.dumps(patterns, cls=EnhancedJSONEncoder, indent=4))
+            json_index += 1
+
 else:
     piranha_summary = run_piranha_cli(
         codebase_path, config_path, should_rewrite_files=False)
-    m_decls.extend(run_for_piranha_summary(piranha_summary))
+    patterns.extend(run_for_piranha_summary(piranha_summary))
 
-for m in m_decls:
-    print(f'\n{m}')
+# TODO:
+# collect all objects in `*.json` files into one? maybe other script?
