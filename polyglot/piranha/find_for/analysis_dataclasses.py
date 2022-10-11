@@ -47,6 +47,9 @@ class Range:
     def after(self, other: 'Range') -> bool:
         """
         Assumes that each Range will be in different lines.
+        Returns:
+          start_point.row > other.start_point.row and \
+            end_point.row > other.end_point.row
         """
         return self.s_point.row > other.s_point.row and \
             self.e_point.row > other.e_point.row

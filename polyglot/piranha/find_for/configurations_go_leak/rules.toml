@@ -1,0 +1,23 @@
+[[rules]]
+name = "send_stmt"
+query = """
+(
+    (send_statement) @send_stmt
+)
+"""
+
+[[rules]]
+name = "func_lit"
+query = """
+(
+    (func_literal) @func_lit
+)
+"""
+
+[[rules]]
+name = "method_decl"
+query = """
+(
+    (method_declaration) @method_decl
+)
+"""
