@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import datetime
 import os
 import subprocess
+import sys
 from polyglot_piranha import run_piranha_cli
 import csv
 import argparse
@@ -27,11 +28,12 @@ class MethodDecl:
     range: Range
     channels: 'list[Channel]'
     func_literals: 'list[FuncLiteral]'
-    after_return_stmt: 'Range'
-    # after_channel_receive: 'Range'
+    after_return_stmt: 'list[Range]'
+    after_channel_receive: 'list[Range]'
 
     def chan_names(self):
-        return [ c.id for c in self.channels ]
+        return [c.id for c in self.channels]
+
 
 def range_from_match_range(match_range) -> Range:
     s_p = Point(match_range.start_point.row, match_range.start_point.column)
@@ -45,7 +47,7 @@ def ranges_dict(summary_matches) -> 'tuple[dict[str, list[Range]], list[Channel]
     for match in summary_matches:
         rule_name = match[0]
         match_range: Range = range_from_match_range(match[1].range)
-        if rule_name == 'make_chan':
+        if rule_name == 'chan_make':
             chan_matches: 'dict[str, str]' = match[1].matches
             chans.append(Channel(chan_matches['chan_id'], match_range))
         elif rule_name in r_d:
@@ -70,6 +72,7 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
         chans: 'list[Channel]' = results[1]
 
         if all([rule_name in ranges_by_rule for rule_name in mandatory_rule_names]):
+            print(f'all mandatory rules: {file_path}')
             for m_decl_range in ranges_by_rule['method_decl']:
                 func_literals: 'list[FuncLiteral]' = []
                 after_send_stmt_ranges: 'list[Range]' = []
@@ -98,7 +101,7 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
                     # method_declaration
                     # # func_literal
                     # # # send_statement
-                    return_after_func_lits: 'Range|None' = None
+                    returns_after_func_lits: 'list[Range]' = []
                     for ret_range in ranges_by_rule['return_stmt']:
                         if ret_range.after(m_decl_range):
                             break
@@ -106,8 +109,7 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
                         if ret_range.within(m_decl_range) and \
                                 all(ret_range.after(func_lit.range) for func_lit in func_literals):
                             # return after all func_literals
-                            return_after_func_lits = ret_range
-                            break
+                            returns_after_func_lits.append(ret_range)
 
                     # channels before func_literal
                     chans_before_func_lits: 'list[Channel]' = []
@@ -124,25 +126,23 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
                     # # func_literal
                     # # # send_statement
                     # # return_statement
-                    if return_after_func_lits:
-                        # for send_stmt_range in after_send_stmt_ranges:
-                        #     # method_declaration
-                        #     # # func_literal
-                        #     # # # send_statement
-                        #     # # return_statement
-                        #     # # send_statement
-                        #     if send_stmt_range.after(return_after_func_lits):
-                        #         m_d = MethodDecl(
-                        #             file_path, m_decl_range, chans_before_func_lits, func_literals, return_after_func_lits, send_stmt_range)
-                        #         m_decls.append(m_d)
-                        #         print(m_d)
-                        #         break
+                    if len(returns_after_func_lits) > 0:
 
-                        m_d = MethodDecl(
-                            file_path, m_decl_range, chans_before_func_lits, func_literals, return_after_func_lits)
-                        m_decls.append(m_d)
-                        print(m_d)
-                        break
+                        chan_receives_after_rets: 'list[Range]' = []
+                        for chan_rec in ranges_by_rule['chan_receive']:
+                            if chan_rec.after(m_decl_range):
+                                break
+
+                            if chan_rec.within(m_decl_range) and \
+                                    any(chan_rec.after(ret_range) for ret_range in returns_after_func_lits):
+                                chan_receives_after_rets.append(chan_rec)
+
+                        if len(chan_receives_after_rets) > 0:
+                            m_d = MethodDecl(
+                                file_path, m_decl_range, chans_before_func_lits, func_literals, returns_after_func_lits, chan_receives_after_rets)
+                            m_decls.append(m_d)
+                            print(m_d)
+                            sys.exit(0)
 
     return m_decls
 
@@ -180,6 +180,7 @@ mandatory_rule_names = [
     'func_lit',
     'method_decl',
     'return_stmt',
+    'chan_receive'
 ]
 
 m_decls: 'list[MethodDecl]' = []

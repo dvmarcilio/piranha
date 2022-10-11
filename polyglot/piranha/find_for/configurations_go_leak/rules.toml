@@ -31,7 +31,7 @@ query = """
 """
 
 [[rules]]
-name = "make_chan"
+name = "chan_make"
 query = """
 (
     (short_var_declaration
@@ -50,5 +50,14 @@ query = """
         )
     )
     (#eq? @func_id "make")
+)
+"""
+
+[[rules]]
+name = "chan_receive"
+query = """
+(
+    (unary_expression) @u_e
+    (#match? @u_e "<-.*")
 )
 """
