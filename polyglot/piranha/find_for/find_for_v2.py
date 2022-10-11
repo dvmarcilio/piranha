@@ -1,4 +1,4 @@
- #!/usr/bin/env python3
+#!/usr/bin/env python3
 
 import datetime
 import os
@@ -12,13 +12,16 @@ from dataclass_csv import DataclassReader
 
 # python3 -m pip install dataclass_csv
 
+
 def row_col(point) -> 'tuple[int, int]':
     return point.row, point.column
+
 
 def distinct_elements_from_list(lst: 'list'):
     # adding to a dict discards duplicates
     # dict maintains insertion order
     return list(dict.fromkeys(lst))
+
 
 def csv_rows_from_summary(summary) -> 'list[str]':
     rows = []
@@ -28,6 +31,8 @@ def csv_rows_from_summary(summary) -> 'list[str]':
         rule_name = match[0]
         piranha_match = match[1]
         range = piranha_match.range
+        print("PiranhaMatch\n    matches:dict[str, str]")
+        print(piranha_match.matches)
         s_row, s_col = row_col(range.start_point)
         e_row, e_col = row_col(range.end_point)
         csv_row = CsvRow(path, s_row, s_col, e_row, e_col, rule_name)
@@ -37,6 +42,7 @@ def csv_rows_from_summary(summary) -> 'list[str]':
 
     return rows
 
+
 def rows_from_csv(csv_path: str) -> 'list[CsvRow]':
     rows: 'list[CsvRow]' = []
     with open(csv_path) as f:
@@ -45,6 +51,7 @@ def rows_from_csv(csv_path: str) -> 'list[CsvRow]':
         for row in reader:
             rows.append(row)
     return rows
+
 
 def write_summaries_to_file(piranha_summary, output_file_path):
     with open(output_file_path, 'a+') as output_file:
@@ -66,10 +73,12 @@ def unique_file_paths_from_summary(piranha_summary) -> 'list[str]':
     non_unique_file_paths = [summary.path for summary in piranha_summary]
     return distinct_elements_from_list(non_unique_file_paths)
 
+
 def range_from_match_range(match_range) -> Range:
     s_p = Point(match_range.start_point.row, match_range.start_point.column)
     e_p = Point(match_range.end_point.row, match_range.end_point.column)
     return Range(s_p, e_p)
+
 
 def summary_ranges_dict(piranha_summary) -> 'dict[str, list[Range]]':
     """
@@ -95,7 +104,8 @@ def summary_ranges_dict(piranha_summary) -> 'dict[str, list[Range]]':
 
     return ranges_dict
 
-def ranges_dict_from_csv(csv_path)-> 'dict[str, list[Range]]':
+
+def ranges_dict_from_csv(csv_path) -> 'dict[str, list[Range]]':
     rows: 'list[CsvRow]' = rows_from_csv(csv_path)
     ranges_dict = {}
     for row in rows:
@@ -109,6 +119,7 @@ def ranges_dict_from_csv(csv_path)-> 'dict[str, list[Range]]':
         else:
             ranges_dict[file] = [row_range]
     return ranges_dict
+
 
 def run_and_write_for_base_pattern() -> 'dict[str, list[Range]]':
     """
@@ -130,6 +141,7 @@ def run_and_write_for_base_pattern() -> 'dict[str, list[Range]]':
 
     return summary_ranges_dict(piranha_summary)
 
+
 def collect_paths_from_csv(csv_path: str) -> 'set[str]':
     paths: 'list[str]' = []
     with open(csv_path) as f:
@@ -138,6 +150,7 @@ def collect_paths_from_csv(csv_path: str) -> 'set[str]':
         for row in reader:
             paths.append(row[0])
     return set(paths)
+
 
 def go_stmts_and_short_v_decls_ranges(piranha_summary) -> 'tuple[list[Range], list[Range]]':
     go_stmts_ranges: 'list[Range]' = []
@@ -156,6 +169,7 @@ def go_stmts_and_short_v_decls_ranges(piranha_summary) -> 'tuple[list[Range], li
 
     return go_stmts_ranges, short_var_decls_ranges
 
+
 def append_rows_to_csv(rows: 'list[CsvRow]', csv_path: str):
     should_write_header = not os.path.exists(csv_path)
 
@@ -172,6 +186,9 @@ def append_rows_to_csv(rows: 'list[CsvRow]', csv_path: str):
 
         for row in rows:
             writer.writerow(row.raw_csv_row())
+
+# Execution
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('codebase_path', type=str)
@@ -218,11 +235,11 @@ if any(os.path.exists(p_csv) for p_csv in csvs):
     sys.exit(0)
 
 # could be more effective if we ran piranha only on the for_stmt lines
-## extract the whole for_stmt
-## store temp file with it
-## recalculate the line number
+# extract the whole for_stmt
+# store temp file with it
+# recalculate the line number
 for file_path, for_ranges_list in for_ranges_dict.items():
-    config_path = os.path.join(base_path, 'v2/')
+    config_path = os.path.join(base_path, 'configurations_v2/')
 
     piranha_summary = run_piranha_cli(file_path,
                                       config_path,
@@ -235,8 +252,8 @@ for file_path, for_ranges_list in for_ranges_dict.items():
     # go stmts inside for loop
 
     # on the general case, the lengths of
-    ## short_var_decls should be way higher than for loops
-    ## for loops should be higher than go_stmts
+    # short_var_decls should be way higher than for loops
+    # for loops should be higher than go_stmts
 
     # ranges are returned in reversed order
     p2_rows = []
@@ -259,7 +276,8 @@ for file_path, for_ranges_list in for_ranges_dict.items():
         if len(within_short_vdecl_ranges) >= 2 and \
                 within_short_vdecl_ranges[0].starts_just_after(for_range) and \
                 within_short_vdecl_ranges[1].after_n_lines(for_range, 2):
-            starting_short_vdecl_ranges = [within_short_vdecl_ranges[0], within_short_vdecl_ranges[1]]
+            starting_short_vdecl_ranges = [
+                within_short_vdecl_ranges[0], within_short_vdecl_ranges[1]]
         else:
             starting_short_vdecl_ranges = []
 
@@ -269,18 +287,23 @@ for file_path, for_ranges_list in for_ranges_dict.items():
                 break
 
             if go_range.within(for_range):
-                p2_rows.append(CsvRow.from_range(file_path, 'any_go_stmt_in_for', go_range))
+                p2_rows.append(CsvRow.from_range(
+                    file_path, 'any_go_stmt_in_for', go_range))
 
                 if go_range.strict_within(for_range):
-                    p3_rows.append(CsvRow.from_range(file_path, 'only_go_stmt', go_range))
+                    p3_rows.append(CsvRow.from_range(
+                        file_path, 'only_go_stmt', go_range))
                 elif starting_short_vdecl_ranges and \
                         go_range.starts_just_after(starting_short_vdecl_ranges[1]) and \
                         go_range.ends_just_before(for_range):
-                    p5_rows.append(CsvRow.from_range(file_path, 'strict_before', go_range))
+                    p5_rows.append(CsvRow.from_range(
+                        file_path, 'strict_before', go_range))
                 elif starting_short_vdecl_ranges:
-                    p6_rows.append(CsvRow.from_range(file_path, 'before', go_range))
+                    p6_rows.append(CsvRow.from_range(
+                        file_path, 'before', go_range))
                 else:
-                    p4_rows.append(CsvRow.from_range(file_path, 'surrounded', go_range))
+                    p4_rows.append(CsvRow.from_range(
+                        file_path, 'surrounded', go_range))
 
     append_rows_to_csv(p2_rows, p2_csv)
     append_rows_to_csv(p3_rows, p3_csv)
