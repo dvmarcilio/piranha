@@ -28,8 +28,8 @@ class MethodDecl:
     range: Range
     channels: 'list[Channel]'
     func_literals: 'list[FuncLiteral]'
-    after_return_stmt: 'list[Range]'
-    after_channel_receive: 'list[Range]'
+    return_stmt_after: 'list[Range]'
+    channel_receive_after: 'list[Range]'
 
     def chan_names(self):
         return [c.id for c in self.channels]
@@ -137,6 +137,11 @@ def run_for_piranha_summary(piranha_summary) -> 'list[MethodDecl]':
                                     any(chan_rec.after(ret_range) for ret_range in returns_after_func_lits):
                                 chan_receives_after_rets.append(chan_rec)
 
+                        # method_declaration
+                        # # func_literal
+                        # # # send_statement
+                        # # return_statement
+                        # # <-ch
                         if len(chan_receives_after_rets) > 0:
                             m_d = MethodDecl(
                                 file_path, m_decl_range, chans_before_func_lits, func_literals, returns_after_func_lits, chan_receives_after_rets)

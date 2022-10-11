@@ -58,6 +58,6 @@ name = "chan_receive"
 query = """
 (
     (unary_expression) @u_e
-    (#match? @u_e "<-.*")
+    (#match? @u_e "<-.+")
 )
 """
