@@ -21,3 +21,11 @@ query = """
     (method_declaration) @method_decl
 )
 """
+
+[[rules]]
+name = "return_stmt"
+query = """
+(
+    (return_statement) @return_stmt
+)
+"""

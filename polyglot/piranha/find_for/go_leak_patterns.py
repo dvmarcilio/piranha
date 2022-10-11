@@ -19,7 +19,8 @@ class FuncLiteral:
 class MethodDecl:
     file: str
     range: Range
-    func_literal: FuncLiteral
+    func_literals: 'list[FuncLiteral]'
+    return_stmts: 'list[Range]'
 
 
 def range_from_match_range(match_range) -> Range:
@@ -76,34 +77,46 @@ def ranges_dict(summary_matches) -> 'dict[str, list[Range]]':
     return r_d
 
 
+rule_names = [
+    'send_stmt',
+    'func_lit',
+    'method_decl',
+    'return_stmt',
+]
+
 m_decls: 'list[MethodDecl]' = []
 for summary in piranha_summary:
     file_path: str = summary.path
     ranges_by_rule: 'dict[str, list[Range]]' = ranges_dict(summary.matches)
-    if 'send_stmt' in ranges_by_rule and 'func_lit' in ranges_by_rule:
-        within_send_stmts: 'list[Range]' = []
-        for func_lit in ranges_by_rule['func_lit']:
-            for send_stmt in ranges_by_rule['send_stmt']:
-                if send_stmt.after(func_lit):
+
+    if all([rule_name in ranges_by_rule for rule_name in rule_names]):
+        for m_decl_range in ranges_by_rule['method_decl']:
+            func_literals: 'list[FuncLiteral]' = []
+            after_send_stmt_ranges: 'list[Range]' = []
+
+            for func_lit_range in ranges_by_rule['func_lit']:
+                # ordered by line, don't need to look ones that are after
+                if func_lit_range.after(m_decl_range):
                     break
 
-                if send_stmt.within:
-                    within_send_stmts.append(send_stmt)
+                if func_lit_range.within(m_decl_range):
+                    within_send_stmts: 'list[Range]' = []
+                    for send_stmt_range in ranges_by_rule['send_stmt']:
+                        if send_stmt_range.after(func_lit_range):
+                            break
 
-            if len(within_send_stmts) > 0 and 'method_decl' in ranges_by_rule:
-                for m_decl in ranges_by_rule['method_decl']:
-                    if m_decl.after(func_lit):
-                        break
+                        if send_stmt_range.within(func_lit_range):
+                            within_send_stmts.append(send_stmt_range)
+                            func_literals.append(
+                                FuncLiteral(func_lit_range, within_send_stmts)
+                            )
+                        elif send_stmt_range.after(func_lit_range):
+                            after_send_stmt_ranges.append(send_stmt_range)
 
-                    if func_lit.within(m_decl):
-                        m_d = MethodDecl(
-                            file_path, m_decl,
-                            FuncLiteral(func_lit, within_send_stmts)
-                        )
-                        m_decls.append(m_d)
+            if len(func_literals) > 0:
+                m_d = MethodDecl(file_path, m_decl_range, func_literals, [])
+                m_decls.append(m_d)
 
-    if len(m_decls) > 5:
-        break
 
 for m in m_decls:
     print(f'\n{m}')
