@@ -31,6 +31,8 @@ query = """
 """
 
 [[rules]]
+# Matching unbuffered channels
+# the `.` anchor denotes that the channel type should be the last child of `argument_list`
 name = "chan_make"
 query = """
 (
@@ -42,15 +44,16 @@ query = """
             (call_expression
                 function: (identifier) @func_id
                 arguments: (
-                    argument_list (
-                        (channel_type) @chan_type
+                    (argument_list
+                        (channel_type) @chan_type .
                     )
                 )
             )
         )
     )
-    (#eq? @func_id "make")
 )
+(#eq? @func_id "make")
+
 """
 
 [[rules]]
