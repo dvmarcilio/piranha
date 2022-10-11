@@ -54,6 +54,16 @@ class Range:
         return self.s_point.row > other.s_point.row and \
             self.e_point.row > other.e_point.row
 
+    def before(self, other: 'Range') -> bool:
+        """
+        Assumes that each Range will be in different lines.
+        Returns:
+          start_point.row < other.start_point.row and \
+            end_point.row < other.end_point.row
+        """
+        return self.s_point.row < other.s_point.row and \
+            self.e_point.row < other.e_point.row
+
     def strict_within(self, other: 'Range') -> bool:
         return self.starts_just_after(other) and self.ends_just_before(other)
 

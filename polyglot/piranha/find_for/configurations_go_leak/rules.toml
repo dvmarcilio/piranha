@@ -29,3 +29,26 @@ query = """
     (return_statement) @return_stmt
 )
 """
+
+[[rules]]
+name = "make_chan"
+query = """
+(
+    (short_var_declaration
+        left:  (expression_list
+            (identifier) @chan_id
+        )
+        right: (expression_list
+            (call_expression
+                function: (identifier) @func_id
+                arguments: (
+                    argument_list (
+                        (channel_type) @chan_type
+                    )
+                )
+            )
+        )
+    )
+    (#eq? @func_id "make")
+)
+"""
