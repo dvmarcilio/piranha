@@ -3,6 +3,7 @@
 import datetime
 import os
 import subprocess
+import sys
 from polyglot_piranha import run_piranha_cli
 import csv
 import argparse
@@ -209,6 +210,12 @@ p3_csv = base_output_path + '3_only.csv'
 p4_csv = base_output_path + '4_surrounded.csv'
 p5_csv = base_output_path + '5_strict_before.csv'
 p6_csv = base_output_path + '6_before.csv'
+
+csvs = [p2_csv, p3_csv, p4_csv, p5_csv, p6_csv]
+
+if any(os.path.exists(p_csv) for p_csv in csvs):
+    print('CSVs already exist. aborting...')
+    sys.exit(0)
 
 # could be more effective if we ran piranha only on the for_stmt lines
 ## extract the whole for_stmt
