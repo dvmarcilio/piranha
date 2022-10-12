@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import dataclasses
 import datetime
+import glob
 import json
 import os
 import subprocess
@@ -233,27 +234,31 @@ mandatory_rule_names = [
     'chan_receive'
 ]
 
-patterns: 'list[Pattern]' = []
 json_index = 0
-# ideally a root dir with several projects (dirs) as 1st level
-if os.path.isdir(codebase_path):
-    sub_dirs = next(os.walk(codebase_path))[1]
-    for curr_dir in sub_dirs:
-        dir_path = os.path.join(codebase_path, curr_dir)
-        # print(f'Running for {dir_path}')
-        piranha_summary = run_piranha_cli(
-            dir_path, config_path, should_rewrite_files=False)
-        curr_patterns = run_for_piranha_summary(piranha_summary)
-        patterns.extend(curr_patterns)
-        if len(curr_patterns) > 0:
-            with open(base_output_path + f'{json_index}.json', 'w') as f:
-                f.write(json.dumps(patterns, cls=EnhancedJSONEncoder, indent=4))
-            json_index += 1
 
-else:
+
+def write_json(patterns: 'list[Pattern]'):
+    global json_index
+    if len(patterns) > 0:
+        with open(base_output_path + f'{json_index}.json', 'w') as f:
+            f.write(json.dumps(patterns, cls=EnhancedJSONEncoder, indent=4))
+        json_index += 1
+
+
+def run_write_for_file(file: str):
     piranha_summary = run_piranha_cli(
-        codebase_path, config_path, should_rewrite_files=False)
-    patterns.extend(run_for_piranha_summary(piranha_summary))
+        file, config_path, should_rewrite_files=False)
+    curr_patterns = run_for_piranha_summary(piranha_summary)
+    write_json(curr_patterns)
+
+
+if os.path.isdir(codebase_path):
+    # doing file by file
+    for go_file in glob.glob(codebase_path + '/**/*.go', recursive=True):
+        run_write_for_file(go_file)
+else:
+    run_write_for_file(codebase_path)
+
 
 # TODO:
 # collect all objects in `*.json` files into one? maybe other script?
