@@ -1,4 +1,4 @@
-# Find `for` occurrences from patterns using Piranha Polyglot
+# Find Patterns using Polyglot Piranha
 
 This repo assumes Piranha Polyglot is using a modified tree-sitter go grammar. In particular, one that exposes the `statement_list` and `statement` productions.
 I have one available here: <https://github.com/dvmarcilio/tree-sitter-go>.
@@ -18,6 +18,23 @@ python3 -m venv .env
 source .env/bin/activate
 pip install --upgrade pip
 pip install /home/user/piranha/polyglot/piranha
+pip install wrapt_timeout_decorator
+```
+
+## Find _go leak_ patterns
+
+```bash
+python3 go_leak_patterns.py /home/user/codebase/go/src ./output_go_leak/
+```
+
+For scalability, the script is skipping files larger than 1MB.
+To change this size, pass the argument like `--skip-threshold-mb=2`.
+
+### Patterns
+
+## Find `for` occurrences from patterns using Piranha Polyglot
+
+```bash
 python3 find_for_patterns.py /home/user/codebase/
 ```
 
@@ -27,7 +44,7 @@ The script will create an output directory (e.g., `output_20220928-145338`) cont
   - values for row and col are 0-indexed (as per tree-sitter). You should add 1 when manually navigating through a file.
 - `revision.txt`: output of running `git rev-parse HEAD` on the codebase script argument.
 
-## Execution
+### Execution
 
 The script first runs Piranha Polyglot for every `.go` file in the codebase collecting matches for `for_statement`.
 All the other patterns look for specific constructs inside `for_statement`'s.
@@ -43,16 +60,16 @@ cp output_20220929-082535/1_for_Loops.csv output/1_for_loops.csv
 python3 find_for_patterns.py /home/user/go-code/ ./output
 ```
 
-## Patterns
+### Patterns
 
-### 1: For loops
+#### 1: For loops
 
 ```go
 for ... {
 }
 ```
 
-### 2: Any `go_stmt` in for
+#### 2: Any `go_stmt` in for
 
 ```go
 for ... {
@@ -62,7 +79,7 @@ for ... {
 }
 ```
 
-### 3: "Only `go_stmt`"
+#### 3: "Only `go_stmt`"
 
 ```go
 for ... {
@@ -70,7 +87,7 @@ for ... {
 }
 ```
 
-### 4: "Surrounded `go_stmt`"
+#### 4: "Surrounded `go_stmt`"
 
 ```go
 for ... {
@@ -80,7 +97,7 @@ for ... {
 }
 ```
 
-### 5: "Variable declaration before `go_stmt`"
+#### 5: "Variable declaration before `go_stmt`"
 
 ```go
 for ... {
@@ -90,7 +107,7 @@ for ... {
 }
 ```
 
-### 6: "Variable declaration before a surrounded `go_stmt`"
+#### 6: "Variable declaration before a surrounded `go_stmt`"
 
 ```go
 for ... {

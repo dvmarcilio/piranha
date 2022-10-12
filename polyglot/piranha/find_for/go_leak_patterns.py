@@ -201,6 +201,7 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
 parser = argparse.ArgumentParser()
 parser.add_argument('codebase_path', type=str)
 parser.add_argument('output_path', type=str, nargs="?")
+parser.add_argument('--skip-threshold-mb', dest='skip_threshold_mb', type=int, default=1)
 args = parser.parse_args()
 
 base_path = os.path.join(os.path.dirname(__file__))
@@ -215,6 +216,9 @@ else:
 
 if not os.path.exists(base_output_path):
     os.mkdir(base_output_path)
+
+matches_path = base_output_path + 'matches/'
+os.mkdir(matches_path)
 
 print(f'base output path: {base_output_path}', flush=True)
 revision_file_path = base_output_path + 'revision.txt'
@@ -236,28 +240,52 @@ mandatory_rule_names = [
 
 json_index = 0
 
-
 def write_json(patterns: 'list[Pattern]'):
     global json_index
     if len(patterns) > 0:
-        with open(base_output_path + f'{json_index}.json', 'w') as f:
+        with open(matches_path + f'{json_index}.json', 'w') as f:
             f.write(json.dumps(patterns, cls=EnhancedJSONEncoder, indent=4))
         json_index += 1
 
 
-def run_write_for_file(file: str):
-    piranha_summary = run_piranha_cli(
+def do_run_write_for_file(file: str):
+    summary = run_piranha_cli(
         file, config_path, should_rewrite_files=False)
-    curr_patterns = run_for_piranha_summary(piranha_summary)
+    curr_patterns = run_for_piranha_summary(summary)
     write_json(curr_patterns)
 
 
+def write_to_file(txt: str, file_path):
+    with open(file_path, 'a+') as f:
+        f.write(txt + '\n')
+
+
+def print_with_timestamp(msg):
+    now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    print('[' + now + '] ' + msg, flush=True)
+
+
+executed_file = base_output_path + 'executed.txt'
+skipped_file = base_output_path + 'skipped.txt'
+
+count = 1
 if os.path.isdir(codebase_path):
-    # doing file by file
+    # file by file
     for go_file in glob.glob(codebase_path + '/**/*.go', recursive=True):
-        run_write_for_file(go_file)
+        file_size_mb = os.path.getsize(go_file) / 1e+6
+        if file_size_mb > args.skip_threshold_mb:
+            print_with_timestamp(f"Skipping large file '{go_file}'")
+            write_to_file(go_file, skipped_file)
+            continue
+
+        write_to_file(go_file, executed_file)
+        do_run_write_for_file(go_file)
+        count += 1
+        if count % 500 == 0:
+            print_with_timestamp(f'Executed for {count} files')
+
 else:
-    run_write_for_file(codebase_path)
+    do_run_write_for_file(codebase_path)
 
 
 # TODO:

@@ -52,9 +52,11 @@ query = """
         )
     )
 )
-(#eq? @func_id "make")
-
 """
+# (#eq? @func_id "make")
+# ideally, we would have this predicate in the channel query
+# however, it produces several "bogus" matches on tree-sitter CLI
+# skipping it and assuming the (low?) risk of having false positives
 
 [[rules]]
 name = "chan_receive"
