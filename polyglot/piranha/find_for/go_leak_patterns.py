@@ -81,6 +81,7 @@ def ranges_dict(summary_matches) -> 'tuple[dict[str, list[Range]], list[Channel]
 
     return r_d, chans
 
+
 def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
     patterns: 'list[Pattern]' = []
     for summary in piranha_summary:
@@ -184,21 +185,31 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                         # # <-ch
                         if len(chan_receives_after_rets) > 0:
 
-                            after_if_select_ranges: 'list[Range]' = []
-                            func_lit_ranges: 'list[Range]' = [ func_lit.range for func_lit in func_literals ]
-                            if_select_stmt_ranges: 'list[Range]' = ranges_by_rule.get('if_stmt', []) + ranges_by_rule.get('select_stmt', [])
+                            def after_func_lit_within_mdecl(ranges_to_check: 'list[Range]') ->  'list[Range]':
+                                func_lit_ranges: 'list[Range]' = [
+                                func_lit.range for func_lit in func_literals]
+                                ranges: 'list[Range]' = []
+                                for func_lit_range in func_lit_ranges:
+                                    for if_slct_range in ranges_to_check:
+                                        if if_slct_range.after(m_decl_range):
+                                            break
 
-                            for func_lit_range in func_lit_ranges:
-                                for if_slct_range in if_select_stmt_ranges:
-                                    if if_slct_range.after(m_decl_range):
-                                        break
+                                        if if_slct_range.after(func_lit_range) and \
+                                                if_slct_range.within(m_decl_range):
+                                            ranges.append(
+                                                if_slct_range)
 
-                                    if if_slct_range.after(func_lit_range) and \
-                                            if_slct_range.within(m_decl_range):
-                                        after_if_select_ranges.append(if_slct_range)
+                                return ranges
+
+                            after_if_ranges: 'list[Range]' = after_func_lit_within_mdecl(ranges_by_rule.get(
+                                'if_stmt', []))
+                            after_select_ranges: 'list[Range]' = after_func_lit_within_mdecl(ranges_by_rule.get(
+                                'select_stmt', []))
+                            if_select_stmt_ranges: 'list[Range]' = after_if_ranges + \
+                                after_select_ranges
 
                             has_any_receive_inside_if_slct = False
-                            for if_slct_range in after_if_select_ranges:
+                            for if_slct_range in if_select_stmt_ranges:
                                 if any(chan_receive.within(if_slct_range) for chan_receive in chan_receives_after_rets):
                                     has_any_receive_inside_if_slct = True
                                     break
