@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import dataclasses
 
 @dataclass(eq=True, frozen=True)
 class CsvRow:
@@ -73,6 +74,9 @@ class Range:
     def start_row(self) -> int:
         return self.s_point.row
 
+    def start_line(self) -> int:
+        return self.start_row() + 1
+
     def after_n_lines(self, other: 'Range', n_lines: int) -> bool:
         return self.s_point.row == other.s_point.row + n_lines
 
@@ -81,3 +85,52 @@ class Range:
 
     def ends_just_before(self, other: 'Range') -> bool:
         return self.e_point.row == other.e_point.row - 1
+
+@dataclass(eq=True, frozen=True)
+class FuncLiteral:
+    range: Range
+    send_stmts: 'list[Range]'
+    if_stmts: 'list[Range]'
+    select_stmts: 'list[Range]'
+    is_pattern2: bool
+
+    def start_line(self) -> int:
+        return self.range.start_row() + 1
+
+@dataclass(eq=True, frozen=True)
+class Channel:
+    id: str
+    range: Range
+
+    def start_line(self) -> int:
+        return self.range.start_row() + 1
+
+@dataclass(eq=True, frozen=True)
+class MethodDecl:
+    file: str
+    range: Range
+    channels: 'list[Channel]'
+    func_literals: 'list[FuncLiteral]'
+    return_stmt_after: 'list[Range]'
+    channel_receive_after: 'list[Range]'
+
+    def chan_names(self) -> 'list[str]':
+        return [c.id for c in self.channels]
+
+    def is_pattern2(self) -> bool:
+        return any(fl.is_pattern2 for fl in self.func_literals)
+
+    def start_line(self) -> int:
+        return self.range.start_row() + 1
+
+@dataclass(eq=True, frozen=True)
+class Pattern:
+    name: str
+    m_decl: MethodDecl
+
+def dataclass_from_dict(klass, d):
+    try:
+        fieldtypes = {f.name:f.type for f in dataclasses.fields(klass)}
+        return klass(**{f:dataclass_from_dict(fieldtypes[f],d[f]) for f in d})
+    except:
+        return d # Not a dataclass field

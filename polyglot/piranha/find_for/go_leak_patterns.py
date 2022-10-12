@@ -7,7 +7,8 @@ import os
 import subprocess
 from polyglot_piranha import run_piranha_cli
 import argparse
-from analysis_dataclasses import Range, Point
+
+from analysis_dataclasses import Point, Range, Channel, FuncLiteral, Pattern, MethodDecl
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -15,43 +16,6 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
-
-
-@dataclass(eq=True, frozen=True)
-class FuncLiteral:
-    range: Range
-    send_stmts: 'list[Range]'
-    if_stmts: 'list[Range]'
-    select_stmts: 'list[Range]'
-    is_pattern2: bool
-
-
-@dataclass(eq=True, frozen=True)
-class Channel:
-    id: str
-    range: Range
-
-
-@dataclass(eq=True, frozen=True)
-class MethodDecl:
-    file: str
-    range: Range
-    channels: 'list[Channel]'
-    func_literals: 'list[FuncLiteral]'
-    return_stmt_after: 'list[Range]'
-    channel_receive_after: 'list[Range]'
-
-    def chan_names(self) -> 'list[str]':
-        return [c.id for c in self.channels]
-
-    def is_pattern2(self) -> bool:
-        return any(fl.is_pattern2 for fl in self.func_literals)
-
-
-@dataclass(eq=True, frozen=True)
-class Pattern:
-    name: str
-    m_decl: MethodDecl
 
 
 def range_from_match_range(match_range) -> Range:
@@ -185,9 +149,9 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                         # # <-ch
                         if len(chan_receives_after_rets) > 0:
 
-                            def after_func_lit_within_mdecl(ranges_to_check: 'list[Range]') ->  'list[Range]':
+                            def after_func_lit_within_mdecl(ranges_to_check: 'list[Range]') -> 'list[Range]':
                                 func_lit_ranges: 'list[Range]' = [
-                                func_lit.range for func_lit in func_literals]
+                                    func_lit.range for func_lit in func_literals]
                                 ranges: 'list[Range]' = []
                                 for func_lit_range in func_lit_ranges:
                                     for if_slct_range in ranges_to_check:

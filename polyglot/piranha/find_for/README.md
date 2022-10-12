@@ -30,6 +30,12 @@ python3 go_leak_patterns.py /home/user/codebase/go/src ./output_go_leak/
 For scalability, the script is skipping files larger than 1MB.
 To change this size, pass the argument like `--skip-threshold-mb=2`.
 
+After the script is finished, summarize the output:
+
+```bash
+python3 summarize_patterns.py ./output_go_leak
+```
+
 ### Patterns
 
 ## Find `for` occurrences from patterns using Piranha Polyglot
