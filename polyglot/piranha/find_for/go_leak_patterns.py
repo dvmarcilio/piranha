@@ -130,9 +130,10 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                             if_select_stmts = within_if_stmts + within_select_stmts
                             is_pattern2 = False
                             for send_statement in within_send_stmts:
-                                is_pattern2 = any(send_statement.within(
+                                is_pattern1 = any(send_statement.within(
                                     if_select) for if_select in if_select_stmts)
-                                if is_pattern2:
+                                if not is_pattern1:
+                                    is_pattern2 = True
                                     break
 
                             func_literals.append(FuncLiteral(
@@ -273,6 +274,10 @@ if os.path.isdir(codebase_path):
     # file by file
     for go_file in glob.glob(codebase_path + '/**/*.go', recursive=True):
         file_size_mb = os.path.getsize(go_file) / 1e+6
+        if go_file.endswith('-gen.go'):
+            print_with_timestamp(f"Skipping generated file '{go_file}'")
+            write_to_file(go_file, skipped_file)
+            continue
         if file_size_mb > args.skip_threshold_mb:
             print_with_timestamp(f"Skipping large file '{go_file}'")
             write_to_file(go_file, skipped_file)
