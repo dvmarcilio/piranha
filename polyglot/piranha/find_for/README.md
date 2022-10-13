@@ -18,7 +18,6 @@ python3 -m venv .env
 source .env/bin/activate
 pip install --upgrade pip
 pip install /home/user/piranha/polyglot/piranha
-pip install wrapt_timeout_decorator
 ```
 
 ## Find _go leak_ patterns

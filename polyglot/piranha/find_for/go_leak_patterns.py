@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import dataclasses
 import datetime
 import glob
@@ -65,7 +64,6 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
 
                     if func_lit_range.within(m_decl_range):
                         within_send_stmts: 'list[Range]' = []
-                        # duplication below for the 3
                         for send_stmt_range in ranges_by_rule['send_stmt']:
                             if send_stmt_range.after(func_lit_range):
                                 break
@@ -288,7 +286,3 @@ if os.path.isdir(codebase_path):
 
 else:
     do_run_write_for_file(codebase_path)
-
-
-# TODO:
-# collect all objects in `*.json` files into one? maybe other script?
