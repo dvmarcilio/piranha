@@ -174,8 +174,7 @@ def compute_pattern_for_identifier(identifier: str, mdecl_range: Range, matches_
                 const_pattern_match = compute_pattern_for_selector_exp(
                     selector_exp, import_decl)
                 if const_pattern_match:
-                    pattern_matches = matches_queue + \
-                        [const_import_match, const_pattern_match]
+                    pattern_matches = [const_import_match, const_pattern_match]
                     return matches_queue + pattern_matches
                 else:
                     return matches_queue + [const_import_match, no_pattern]
