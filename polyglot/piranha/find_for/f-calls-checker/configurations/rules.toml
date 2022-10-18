@@ -1,0 +1,168 @@
+[[rules]]
+name = "import_decl"
+query = """
+(
+    (import_declaration) @import_decl
+)
+"""
+
+[[rules]]
+name = "method_decl"
+query = """
+(
+    (method_declaration) @method_decl
+)
+"""
+
+[[rules]]
+name = "function_decl"
+query = """
+(
+    (function_declaration) @function_decl
+)
+"""
+
+[[rules]]
+name = "str_arguments"
+query = """
+(
+    (parameter_list
+        (parameter_declaration
+            name: (identifier) @param_id
+            type: (type_identifier) @type_id
+        )
+    )
+    (#eq? @type_id "string")
+)
+"""
+
+[[rules]]
+name = "const_str_literal"
+query = """
+(
+	(const_spec
+        name: (identifier) @const_id
+        value: (expression_list
+            (interpreted_string_literal) @const_val_str
+        )
+    )
+)
+"""
+
+[[rules]]
+name = "var_str_literal"
+query = """
+(
+	(var_spec
+        name: (identifier) @var_id
+        value: (expression_list
+            (interpreted_string_literal) @var_val_str
+        )
+    )
+)
+"""
+
+[[rules]]
+name = "short_var_decl_val_str_literal"
+query = """
+(
+    (short_var_declaration
+        left: (expression_list
+            (identifier) @s_vdecl_id
+        )
+        right: (expression_list
+            (interpreted_string_literal) @s_vdecl_val_str_literal
+        )
+    )
+)
+"""
+
+[[rules]]
+name = "short_var_decl_val_id"
+query = """
+(
+    (short_var_declaration
+        left: (expression_list
+            (identifier) @s_vdecl_id
+        )
+        right: (expression_list
+            (identifier) @s_vdecl_val_id
+        )
+    )
+)
+"""
+
+[[rules]]
+name = "short_var_decl_val_selector_exp"
+query = """
+(
+    (short_var_declaration
+        left: (expression_list
+            (identifier) @s_vdecl_id
+        )
+        right: (expression_list
+            (selector_expression) @s_vdecl_val_selector_exp
+        )
+    )
+)
+"""
+
+[[rules]]
+name = "call_str_literal"
+query = """
+(
+    (call_expression
+        function: (selector_expression
+            operand: (_)
+            field: (field_identifier) @func_id
+        )
+        arguments: (argument_list
+            (_)
+            (interpreted_string_literal) @arg_str_literal
+            (_)
+            (_)
+        )
+    ) @call_expr
+    (#eq? @func_id "GetBoolValue")
+)
+"""
+
+[[rules]]
+name = "call_selector_exp"
+query = """
+(
+    (call_expression
+        function: (selector_expression
+            operand: (_)
+            field: (field_identifier) @func_id
+        )
+        arguments: (argument_list
+            (_)
+            (selector_expression) @arg_selector_exp
+            (_)
+            (_)
+        )
+    )
+    (#eq? @func_id "GetBoolValue")
+)
+"""
+
+[[rules]]
+name = "call_identifier"
+query = """
+(
+    (call_expression
+        function: (selector_expression
+            operand: (_)
+            field: (field_identifier) @func_id
+        )
+        arguments: (argument_list
+            (_)
+            (identifier) @arg_id
+            (_)
+            (_)
+        )
+    )
+    (#eq? @func_id "GetBoolValue")
+)
+"""
