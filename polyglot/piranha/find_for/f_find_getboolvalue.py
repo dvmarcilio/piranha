@@ -105,13 +105,6 @@ def lookup_in_other_file(id: str, root_dir: str) -> 'PatternMatch|None':
 
 
 def compute_pattern_for_selector_exp(selector_exp: str, import_decl_matches: 'list[Match]') -> 'PatternMatch|None':
-    # TODO: deal with package_identifier import
-    # `fliprClient "code..."`
-    # (import_spec
-    #        name: (package_identifier)
-    #        path: (interpreted_string_literal)
-    # )
-
     # XXX ideally, we should parse and not deal with str?
     assert (len(import_decl_matches) == 1)
     import_decl = import_decl_matches[0].matches_dict.get('import_decl', '')
@@ -120,6 +113,8 @@ def compute_pattern_for_selector_exp(selector_exp: str, import_decl_matches: 'li
     split = selector_exp.split('.')
     package = split[0]
     id = split[1]
+    named_import_prefix = f'{package} '
+
     for line in import_decl.splitlines():
         line = line.strip()
         if line.startswith(f'"{args.local_import_prefix}') and line.endswith(f'/{package}"'):
@@ -129,6 +124,15 @@ def compute_pattern_for_selector_exp(selector_exp: str, import_decl_matches: 'li
             const_lookup_match = lookup_in_other_file(id, dir_path)
             if const_lookup_match:
                 # TODO add the import to the matches dict?
+                return const_lookup_match
+        elif line.startswith(named_import_prefix):
+            # with surrounding `"`
+            dir_path = line[len(named_import_prefix):]
+            # strip surrounding `"`
+            dir_path = args.source_path + dir_path[1:-1]
+
+            const_lookup_match = lookup_in_other_file(id, dir_path)
+            if const_lookup_match:
                 return const_lookup_match
 
     return None
