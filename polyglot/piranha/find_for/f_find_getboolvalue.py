@@ -141,6 +141,9 @@ def compute_pattern_for_identifier(identifier: str, mdecl_range: Range, matches_
     # Inefficient as usual, but should get the job done
     # TODO: efficiency: populate a map for already computed within X m_decl
 
+    no_pattern = PatternMatch(
+        'no_pattern_identifier', file_path, Match.empty())
+
     for s_vdecl_match in matches_by_rule.get('short_var_decl_val_str_literal', []):
         if s_vdecl_match.range.after(mdecl_range):
             break
@@ -163,13 +166,15 @@ def compute_pattern_for_identifier(identifier: str, mdecl_range: Range, matches_
                 selector_exp = s_vdecl_match.matches_dict['s_vdecl_val_selector_exp']
                 import_decl = matches_by_rule.get('import_decl', [])
                 const_import_match = PatternMatch(
-                    'short_var_decl_const_lookup', file_path, s_vdecl_match)
+                    'short_var_decl_selector_exp', file_path, s_vdecl_match)
                 const_pattern_match = compute_pattern_for_selector_exp(
                     selector_exp, import_decl)
                 if const_pattern_match:
                     pattern_matches = matches_queue + \
                         [const_import_match, const_pattern_match]
                     return matches_queue + pattern_matches
+                else:
+                    return matches_queue + [const_import_match, no_pattern]
 
     for const_str_literal_match in matches_by_rule.get('const_str_literal', []):
         const_id = const_str_literal_match.matches_dict['const_id']
@@ -222,8 +227,6 @@ def compute_pattern_for_identifier(identifier: str, mdecl_range: Range, matches_
     if lookup_match:
         return matches_queue + [lookup_match]
 
-    no_pattern = PatternMatch(
-        'no_pattern_identifier', file_path, Match.empty())
     return matches_queue + [no_pattern]
 
 
@@ -274,6 +277,13 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                     pattern_matches)
                 p = Pattern(pattern_name, file_path, pattern_matches)
                 patterns.append(p)
+            else:
+                no_pattern = PatternMatch(
+                    'no_pattern_selector_exp', file_path, Match.empty())
+                pattern_matches = [pattern_match, no_pattern]
+                pattern_name = PatternMatch.p_name_from_lst(pattern_matches)
+                p = Pattern(pattern_name, file_path, pattern_matches)
+                patterns.append(p)
 
         if len_before == len(patterns):
             p = Pattern('no_pattern', file_path, [])
@@ -317,7 +327,8 @@ else:
 os.makedirs(base_output_path, exist_ok=True)
 
 executed_file = base_path + 'executed.txt'
-os.remove(executed_file)
+if os.path.exists(executed_file):
+    os.remove(executed_file)
 json_index = 0
 
 print(f'Running for {len(paths)} files')
