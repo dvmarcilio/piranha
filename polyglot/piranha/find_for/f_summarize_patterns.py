@@ -47,20 +47,29 @@ else:
 count_by_pattern: 'dict[str, int]' = {}
 total = 0
 distinct_files: 'set[str]' = set()
+files_by_pattern: 'dict[str, set[str]]' = {}
 
 for json_file_path in glob.glob(matches_path + '/*.json'):
     with open(json_file_path) as file:
         patterns_dict = json.load(file)
         for p in patterns_dict:
             pattern: Pattern = dataclass_from_dict(Pattern, p)
+
             count_by_pattern[pattern.name] = count_by_pattern.get(
                 pattern.name, 0) + 1
+            pattern_files = files_by_pattern.get(pattern.name, set())
+            pattern_files.add(pattern.file)
+            # probably don't need to reassign
+            files_by_pattern[pattern.name] = pattern_files
+
             total += 1
             distinct_files.add(pattern.file)
 
 # descending order by count
 count_by_pattern = dict(sorted(count_by_pattern.items(),
                         key=lambda item: item[1], reverse=True))
+files_by_pattern = dict(sorted(files_by_pattern.items(),
+                        key=lambda item: len(item[1]), reverse=True))
 
 print(f'total files: {len(distinct_files):,}')
 print(f'total patterns: {total:,}\n')
@@ -68,8 +77,16 @@ for pattern_name, count in count_by_pattern.items():
     pct = (count / float(total)) * 100
     print(f'- {pattern_name}: {count:,} ({pct:.2f}%)')
 
-print()
-print('Paths with `GetBoolValue(` but nothing found:\n')
+nothing_found: 'list[str]' = []
 for path in paths:
     if not path in distinct_files:
-        print(path)
+        nothing_found.append(path)
+
+print(
+    f'\nPaths with `GetBoolValue(` but nothing found ({len(nothing_found)}):\n')
+for p in nothing_found:
+    print(p)
+
+print('Files per pattern:\n')
+for pattern_name, files_set in files_by_pattern.items():
+    print(f'{pattern_name}: {len(files_set):,}')
