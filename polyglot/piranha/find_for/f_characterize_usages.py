@@ -105,11 +105,9 @@ def compute_pattern_for_identifier(bool_id: str, bool_id_range: Range, mdecl_ran
                 for id_match in m_b_r.get('identifier', []):
                     if bool_id == id_match.matches_dict['id']:
                         found = True
-                        if_match = PatternMatch(
-                            'if_condition', file_path, if_condition_match)
-                        patch_match = PatternMatch(
+                        condition_match = PatternMatch(
                             'if_condition_variable', file_path, id_match)
-                        pattern_matches.extend([if_match, patch_match])
+                        pattern_matches.append(condition_match)
                         break
 
                 if found:
