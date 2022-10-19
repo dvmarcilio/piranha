@@ -20,6 +20,16 @@ pip install --upgrade pip
 pip install /home/user/piranha/polyglot/piranha
 ```
 
+## f GetBoolValue()
+
+```
+cd polyglot/piranha/find_for/
+rm -Rf f-calls-checker/matches/non-tests && python3 f_find_getboolvalue.py --local_import_prefix=github.com/ --source_path=/home/user/go-code/src
+python3 f_summarize_patterns.py
+```
+
+If running for test paths, add `--test_paths`.
+
 ## Find _go leak_ patterns
 
 ```bash
