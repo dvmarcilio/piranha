@@ -25,6 +25,7 @@ paths: 'list[str]' = []
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--test_paths', action='store_true', default=False)
+parser.add_argument('--usage', action='store_true', default=False)
 args = parser.parse_args()
 
 
@@ -38,10 +39,14 @@ if args.test_paths:
     matches_path += 'tests/'
     print('Running for test Paths')
 else:
-    print('*Not* running for test paths')
-    matches_path += 'non-tests/'
     paths = paths_in_txt(
         'paths.txt') + paths_in_txt('paths_no_import.txt')
+    if args.usage:
+        print('Running for usage matches')
+        matches_path = os.path.join(base_path, 'matches-usage', 'non-tests/')
+    else:
+        print('*Not* running for test paths')
+        matches_path += 'non-tests/'
 
 
 count_by_pattern: 'dict[str, int]' = {}

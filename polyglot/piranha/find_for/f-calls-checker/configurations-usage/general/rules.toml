@@ -1,0 +1,133 @@
+[[rules]]
+name = "method_decl"
+query = """
+(
+    (method_declaration) @method_decl
+)
+"""
+
+[[rules]]
+name = "function_decl"
+query = """
+(
+    (function_declaration) @function_decl
+)
+"""
+
+[[rules]]
+name = "assignment_call"
+query = """
+(
+    (assignment_statement
+        left: (expression_list
+            (identifier) @bool_id
+            (identifier) @error_id
+        )
+        right: (expression_list
+            (call_expression
+                function: (selector_expression
+                    operand: (_)
+                    field: (field_identifier) @func_id
+                )
+                arguments: (argument_list
+                    (_)
+                    (_)
+                    (_)
+                    (_)
+                )
+            )
+        )
+    )
+    (#eq? @func_id "GetBoolValue")
+)
+"""
+
+[[rules]]
+name = "return_call"
+query = """
+(
+    (return_statement
+        (expression_list
+            (call_expression
+                function: (selector_expression
+                    operand: (_)
+                    field: (field_identifier) @func_id
+                )
+                arguments: (argument_list
+                    (_)
+                    (_)
+                    (_)
+                    (_)
+                )
+            )
+        )
+    )
+    (#eq? @func_id "GetBoolValue")
+)
+"""
+
+[[rules]]
+name = "if_condition"
+query = """
+(
+    (if_statement
+        condition: (_) @if_cond
+    )
+)
+"""
+
+# [[rules]]
+# Will produce several summaries
+# will match
+## `return enabled, nil` -> @ret_id = enabled
+## `return enabled`      -> @ret_id = enabled
+## `return enabled, err` -> @ret_id = enabled ; @ret_id = err
+# name = "return_id"
+# query = """
+# (
+#     (return_statement
+#         (expression_list
+#             (identifier) @ret_id
+#             (_)*
+#         )
+#     )
+# )
+# """
+
+[[rules]]
+name = "return_id"
+query = """
+(
+    (return_statement
+        (expression_list
+            (identifier) @ret_id
+        )
+    )
+)
+"""
+
+[[rules]]
+name = "return_id_id"
+query = """
+(
+    (return_statement
+        (expression_list
+            (identifier) @ret_id
+            (identifier)
+        )
+    )
+)
+"""
+
+[[rules]]
+name = "return_id_nil"
+query = """
+(
+    (return_statement
+        (expression_list
+            (identifier) @ret_id
+            (nil)
+        )
+    )
+)
+"""
