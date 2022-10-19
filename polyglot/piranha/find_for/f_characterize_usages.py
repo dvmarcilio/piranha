@@ -167,6 +167,8 @@ def first_range(p: Pattern) -> Range:
     return dataclass_from_dict(Range, match.range)
 
 
+assign_decl_rules = ['short_vdecl_call', 'assignment_call', ]
+
 for json_file_path in glob.glob(original_matches_path + '/*.json'):
     patterns: 'list[Pattern]' = []
 
@@ -199,29 +201,30 @@ for json_file_path in glob.glob(original_matches_path + '/*.json'):
                     usage_p = Pattern(name, pattern.file, matches)
                     patterns.append(usage_p)
 
-                for assignment_call_match in matches_by_rule.get('assignment_call', []):
-                    if not assignment_call_match.range.eq_start_or_end_row(p_first_range):
-                        continue
+                for assign_decl_rule in assign_decl_rules:
+                    for assignment_call_match in matches_by_rule.get(assign_decl_rule, []):
+                        if not assignment_call_match.range.eq_start_or_end_row(p_first_range):
+                            continue
 
-                    mdecl_match = parent_mdecl_func_match(
-                        matches_by_rule, assignment_call_match)
-                    if mdecl_match:
-                        bool_id = assignment_call_match.matches_dict['bool_id']
-                        matches: 'list[PatternMatch]' = compute_pattern_for_identifier(
-                            bool_id, assignment_call_match.
-                            range, mdecl_match.range, matches_by_rule, pattern.file)
+                        mdecl_match = parent_mdecl_func_match(
+                            matches_by_rule, assignment_call_match)
+                        if mdecl_match:
+                            bool_id = assignment_call_match.matches_dict['bool_id']
+                            matches: 'list[PatternMatch]' = compute_pattern_for_identifier(
+                                bool_id, assignment_call_match.
+                                range, mdecl_match.range, matches_by_rule, pattern.file)
 
-                        p_match = PatternMatch(
-                            'assignment_call', pattern.file, assignment_call_match)
-                        pattern_matches = [dataclass_from_dict(
-                            PatternMatch, m) for m in pattern.matches]
-                        final_matches: 'list[PatternMatch]' = [
-                            p_match] + matches + pattern_matches
-                        pattern_name = PatternMatch.p_name_from_lst(
-                            final_matches)
-                        usage_p = Pattern(
-                            pattern_name, pattern.file, final_matches)
-                        patterns.append(usage_p)
+                            p_match = PatternMatch(
+                                assign_decl_rule, pattern.file, assignment_call_match)
+                            pattern_matches = [dataclass_from_dict(
+                                PatternMatch, m) for m in pattern.matches]
+                            final_matches: 'list[PatternMatch]' = [
+                                p_match] + matches + pattern_matches
+                            pattern_name = PatternMatch.p_name_from_lst(
+                                final_matches)
+                            usage_p = Pattern(
+                                pattern_name, pattern.file, final_matches)
+                            patterns.append(usage_p)
 
             if len(patterns) == 0:
                 patterns = [

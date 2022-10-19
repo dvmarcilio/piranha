@@ -15,6 +15,34 @@ query = """
 """
 
 [[rules]]
+name = "short_vdecl_call"
+query = """
+(
+    (short_var_declaration
+        left: (expression_list
+            (identifier) @bool_id
+            (identifier) @error_id
+        )
+        right: (expression_list
+            (call_expression
+                function: (selector_expression
+                    operand: (_)
+                    field: (field_identifier) @func_id
+                )
+                arguments: (argument_list
+                    (_)
+                    (_)
+                    (_)
+                    (_)
+                )
+            )
+        )
+    )
+    (#eq? @func_id "GetBoolValue")
+)
+"""
+
+[[rules]]
 name = "assignment_call"
 query = """
 (

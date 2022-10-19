@@ -92,6 +92,7 @@ print(
 for p in nothing_found:
     print(p)
 
-print('Files per pattern:\n')
+print('\n## Files per pattern:\n')
+
 for pattern_name, files_set in files_by_pattern.items():
     print(f'{pattern_name}: {len(files_set):,}')
