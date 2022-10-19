@@ -33,7 +33,7 @@ If running for test paths, add `--test_paths`.
 ### Usage patterns
 
 ```bash
-python3 f_characterize_usages.py
+rm -Rf f-calls-checker/matches-usage/non-tests && python3 f_characterize_usages.py
 python3 f_summarize_patterns.py --usage
 ```
 

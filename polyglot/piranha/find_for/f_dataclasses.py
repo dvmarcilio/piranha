@@ -57,8 +57,23 @@ class Range:
     def start_row_eq(self, row: int) -> bool:
         return self.s_point.row == row
 
+    def end_row_eq(self, row: int) -> bool:
+        return self.e_point.row == row
+
+    def eq_start_or_end_row(self, other: 'Range') -> bool:
+        return self.eq_start_row(other) or self.eq_end_row(other)
+
+    def eq_start_row(self, other: 'Range') -> bool:
+        return self.start_row() == other.start_row()
+
+    def eq_end_row(self, other: 'Range') -> bool:
+        return self.end_row() == other.end_row()
+
     def start_row(self) -> int:
         return self.s_point.row
+
+    def end_row(self) -> int:
+        return self.e_point.row
 
     def start_line(self) -> int:
         return self.start_row() + 1

@@ -83,6 +83,8 @@ def compute_pattern_for_identifier(bool_id: str, bool_id_range: Range, mdecl_ran
                     pattern_matches.append(pattern_match)
 
     # TODO alias analysis for the identifier?
+    # # used as an argument for a method call?
+    # # RHS of a new assignment?
 
     for if_condition_match in matches_by_rule.get('if_condition', []):
         if if_condition_match.range.before(bool_id_range):
@@ -158,11 +160,13 @@ return_rules = ['return_id', 'return_id_id', 'return_id_nil', ]
 
 json_index = 0
 
-# we need to create temp files as py piranha_cli takes file paths and checks for file extension
 
-# for identifiers in an if condition
-# capture the whole condition, then re-parse and match all identifiers
-# probably gonna have several summaries: map collect the matches
+def first_range(p: Pattern) -> Range:
+    first_match = dataclass_from_dict(PatternMatch, p.matches[0])
+    match = dataclass_from_dict(Match, first_match.match)
+    return dataclass_from_dict(Range, match.range)
+
+
 for json_file_path in glob.glob(original_matches_path + '/*.json'):
     patterns: 'list[Pattern]' = []
 
@@ -170,6 +174,12 @@ for json_file_path in glob.glob(original_matches_path + '/*.json'):
         patterns_dict = json.load(file)
         for p in patterns_dict:
             pattern: Pattern = dataclass_from_dict(Pattern, p)
+
+            if pattern.name == 'no_pattern':
+                continue
+
+            p_first_range: Range = first_range(pattern)
+
             piranha_summary = summary_for_file(
                 pattern.file, general_config_path)
             for summary in piranha_summary:
@@ -177,15 +187,22 @@ for json_file_path in glob.glob(original_matches_path + '/*.json'):
                     summary.matches)
 
                 for return_call_match in matches_by_rule.get('return_call', []):
+                    if not return_call_match.range.eq_start_or_end_row(p_first_range):
+                        continue
+
                     name = 'return_call;' + pattern.name
                     p_match = PatternMatch(
                         'return_call', pattern.file, return_call_match)
-                    pattern_matches = [dataclass_from_dict(PatternMatch, m) for m in pattern.matches]
+                    pattern_matches = [dataclass_from_dict(
+                        PatternMatch, m) for m in pattern.matches]
                     matches = [p_match] + pattern_matches
                     usage_p = Pattern(name, pattern.file, matches)
                     patterns.append(usage_p)
 
                 for assignment_call_match in matches_by_rule.get('assignment_call', []):
+                    if not assignment_call_match.range.eq_start_or_end_row(p_first_range):
+                        continue
+
                     mdecl_match = parent_mdecl_func_match(
                         matches_by_rule, assignment_call_match)
                     if mdecl_match:
@@ -196,7 +213,8 @@ for json_file_path in glob.glob(original_matches_path + '/*.json'):
 
                         p_match = PatternMatch(
                             'assignment_call', pattern.file, assignment_call_match)
-                        pattern_matches = [dataclass_from_dict(PatternMatch, m) for m in pattern.matches]
+                        pattern_matches = [dataclass_from_dict(
+                            PatternMatch, m) for m in pattern.matches]
                         final_matches: 'list[PatternMatch]' = [
                             p_match] + matches + pattern_matches
                         pattern_name = PatternMatch.p_name_from_lst(
@@ -209,5 +227,7 @@ for json_file_path in glob.glob(original_matches_path + '/*.json'):
                 patterns = [
                     Pattern('no_usage_pattern;' + pattern.name, pattern.file, pattern.matches)]
 
-    write_json(patterns, json_index)
-    json_index += 1
+    # 'no_pattern' will have 0 usage patterns
+    if len(patterns) > 0:
+        write_json(patterns, json_index)
+        json_index += 1
