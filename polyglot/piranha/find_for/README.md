@@ -23,6 +23,7 @@ pip install /home/user/piranha/polyglot/piranha
 ## Find _go leak_ patterns
 
 ```bash
+rm -Rf output_go_leak/
 python3 go_leak_patterns.py /home/user/codebase/go/src ./output_go_leak/
 ```
 
@@ -34,6 +35,8 @@ After the script is finished, summarize the output:
 ```bash
 python3 summarize_patterns.py ./output_go_leak
 ```
+
+`summary.txt` will be written in `./output_go_leak`.
 
 ### Patterns
 

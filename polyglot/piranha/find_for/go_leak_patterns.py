@@ -52,6 +52,8 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
         results = ranges_dict(summary.matches)
         ranges_by_rule: 'dict[str, list[Range]]' = results[0]
         chans: 'list[Channel]' = results[1]
+        all_func_lits_ranges: 'list[Range]' = []
+        send_channel_ids: 'set[str]' = set()
 
         if all([rule_name in ranges_by_rule for rule_name in mandatory_rule_names]):
             for m_decl_range in ranges_by_rule['method_decl']:
@@ -63,11 +65,13 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                         break
 
                     if func_lit_range.within(m_decl_range):
+                        all_func_lits_ranges.append(func_lit_range)
                         within_send_stmts: 'list[Range]' = []
                         for send_stmt_range in ranges_by_rule['send_stmt']:
                             if send_stmt_range.after(func_lit_range):
                                 break
                             if send_stmt_range.within(func_lit_range):
+
                                 within_send_stmts.append(send_stmt_range)
 
                         # within_send is required
@@ -110,8 +114,9 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                             break
 
                         if ret_range.within(m_decl_range) and \
-                                all(ret_range.after(func_lit.range) for func_lit in func_literals):
-                            # return after all func_literals
+                                all(not ret_range.within(func_lit_range) for func_lit_range in all_func_lits_ranges) and \
+                                any(ret_range.after(func_lit_range) for func_lit_range in all_func_lits_ranges):
+                            # return not inside any func_literal
                             returns_after_func_lits.append(ret_range)
 
                     # channels before func_literal
@@ -200,7 +205,7 @@ parser.add_argument('--skip-threshold-mb',
 args = parser.parse_args()
 
 base_path = os.path.join(os.path.dirname(__file__))
-codebase_path = args.codebase_path
+codebase_path = os.path.normpath(os.path.abspath(args.codebase_path)) + os.path.sep
 
 base_output_path = ''
 if not args.output_path:
@@ -215,12 +220,16 @@ if not os.path.exists(base_output_path):
 matches_path = base_output_path + 'matches/'
 os.mkdir(matches_path)
 
-print(f'base output path: {base_output_path}', flush=True)
+print('codebase path:', codebase_path, flush=True)
+print('base output path:', base_output_path, flush=True)
+print('matches path:', matches_path, flush=True)
+
 revision_file_path = base_output_path + 'revision.txt'
 with open(revision_file_path, 'w+') as f:
     rev = subprocess.check_output(cwd=os.path.dirname(codebase_path),
                                   args=['git', 'rev-parse',
                                         'HEAD']).decode('ascii').strip()
+    print('git rev-parse HEAD:', rev)
     f.write(rev)
 
 config_path = os.path.join(base_path, 'configurations_go_leak/')
@@ -241,6 +250,7 @@ def write_json(patterns: 'list[Pattern]'):
     if len(patterns) > 0:
         with open(matches_path + f'{json_index}.json', 'w') as f:
             f.write(json.dumps(patterns, cls=EnhancedJSONEncoder, indent=4))
+        print_with_timestamp(f'Found match #{json_index}')
         json_index += 1
 
 
@@ -270,11 +280,11 @@ if os.path.isdir(codebase_path):
     for go_file in glob.glob(codebase_path + '/**/*.go', recursive=True):
         file_size_mb = os.path.getsize(go_file) / 1e+6
         if go_file.endswith('-gen.go'):
-            print_with_timestamp(f"Skipping generated file '{go_file}'")
+            # print_with_timestamp(f"Skipping generated file '{go_file}'")
             write_to_file(go_file, skipped_file)
             continue
         if file_size_mb > args.skip_threshold_mb:
-            print_with_timestamp(f"Skipping large file '{go_file}'")
+            # print_with_timestamp(f"Skipping large file '{go_file}'")
             write_to_file(go_file, skipped_file)
             continue
 
