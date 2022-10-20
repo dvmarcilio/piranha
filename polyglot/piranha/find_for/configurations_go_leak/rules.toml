@@ -2,7 +2,9 @@
 name = "send_stmt"
 query = """
 (
-    (send_statement) @send_stmt
+    (send_statement
+        channel: (identifier) @chan_id
+    ) @send_stmt
 )
 """
 
@@ -62,7 +64,9 @@ query = """
 name = "chan_receive"
 query = """
 (
-    (unary_expression) @u_e
+    (unary_expression
+        operand: (identifier) @chan_id
+    ) @u_e
     (#match? @u_e "<-.+")
 )
 """

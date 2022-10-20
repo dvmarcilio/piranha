@@ -69,7 +69,8 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                             if send_stmt_range.after(func_lit_range):
                                 break
                             if send_stmt_range.within(func_lit_range):
-                                # TODO: capture id ...
+                                send_channel_ids.add(
+                                    send_stmt_match.matches_dict['chan_id'])
                                 within_send_stmts.append(send_stmt_range)
 
                         # within_send is required
@@ -146,7 +147,10 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
 
                             if chan_rec_range.within(m_decl_range) and \
                                     any(chan_rec_range.after(ret_range) for ret_range in returns_after_func_lits):
-                                chan_receives_after_rets.append(chan_rec_range)
+
+                                chan_id = chan_rec_match.matches_dict['chan_id']
+                                if chan_id in send_channel_ids:
+                                    chan_receives_after_rets.append(chan_rec_range)
 
                         # method_declaration
                         # # func_literal
