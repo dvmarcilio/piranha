@@ -34,6 +34,7 @@ If running for test paths, add `--test_paths`.
 
 ```bash
 rm -Rf f-calls-checker/matches-usage/non-tests && python3 f_characterize_usages.py
+python3 f_summarize_patterns.py --usage --macro_patterns
 python3 f_summarize_patterns.py --usage
 ```
 

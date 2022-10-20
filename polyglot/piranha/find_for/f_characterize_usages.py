@@ -66,6 +66,38 @@ def summary_for_file(file: str, config_path: str):
         file, config_path, should_rewrite_files=False)
 
 
+def focused_match_id(bool_id: str, code_to_parse: str, file_path: str, pattern_name: str) -> 'PatternMatch|None':
+    """
+    Runs Piranha with the more focused identifier rules.
+    Creates a temp file with just `code_to_parse`.
+    As these rules are pretty broad, it's very likely that these rules matches yield several piranha_summary's.
+    """
+    pattern_match = None
+
+    temp_file_path = bool_id + f'_{pattern_name}.go'
+    with open(temp_file_path, "w") as f:
+        f.write(code_to_parse + '\n')
+
+    piranha_summary = summary_for_file(
+        temp_file_path, ids_config_path)
+    for summary in piranha_summary:
+        found = False
+        m_b_r: 'dict[str, list[Match]]' = matches_dict(summary.matches)
+        for id_match in m_b_r.get('identifier', []):
+            if bool_id == id_match.matches_dict['id']:
+                found = True
+                pattern_match = PatternMatch(
+                    pattern_name, file_path, id_match)
+                break
+
+        if found:
+            break
+
+    os.remove(temp_file_path)
+
+    return pattern_match
+
+
 def compute_pattern_for_identifier(bool_id: str, bool_id_range: Range, mdecl_range: Range, matches_by_rule: 'dict[str, list[Match]]', file_path: str, matches_queue: 'list[PatternMatch]' = []) -> 'list[PatternMatch]':
     pattern_matches: 'list[PatternMatch]' = []
 
@@ -82,10 +114,6 @@ def compute_pattern_for_identifier(bool_id: str, bool_id_range: Range, mdecl_ran
                         'return_variable', file_path, return_id_match)
                     pattern_matches.append(pattern_match)
 
-    # TODO alias analysis for the identifier?
-    # # used as an argument for a method call?
-    # # RHS of a new assignment?
-
     for if_condition_match in matches_by_rule.get('if_condition', []):
         if if_condition_match.range.before(bool_id_range):
             continue
@@ -93,27 +121,30 @@ def compute_pattern_for_identifier(bool_id: str, bool_id_range: Range, mdecl_ran
             break
 
         if if_condition_match.range.within(mdecl_range):
-            temp_condition_file_path = bool_id + '_condition.go'
-            with open(temp_condition_file_path, "w") as f:
-                f.write(if_condition_match.matches_dict['if_cond'] + '\n')
+            condition_to_parse = if_condition_match.matches_dict['if_cond']
+            condition_match = focused_match_id(
+                bool_id, condition_to_parse, file_path, 'if_condition_variable')
+            if condition_match:
+                pattern_matches.append(condition_match)
 
-            piranha_summary = summary_for_file(
-                temp_condition_file_path, ids_config_path)
-            for summary in piranha_summary:
-                found = False
-                m_b_r: 'dict[str, list[Match]]' = matches_dict(summary.matches)
-                for id_match in m_b_r.get('identifier', []):
-                    if bool_id == id_match.matches_dict['id']:
-                        found = True
-                        condition_match = PatternMatch(
-                            'if_condition_variable', file_path, id_match)
-                        pattern_matches.append(condition_match)
-                        break
+    # TODO alias analysis for the identifier?
+    # # used as an argument for a method call?
+    for rhs_rule in rhs_rules:
+        for exp_list_match in matches_by_rule.get(rhs_rule, []):
+            if exp_list_match.range.before(bool_id_range):
+                continue
+            if exp_list_match.range.after(mdecl_range):
+                break
 
-                if found:
-                    break
-
-            os.remove(temp_condition_file_path)
+            # is within needed if we have before and after checks?
+            # # isn't it implied?
+            if exp_list_match.range.within(mdecl_range):
+                exp_list_to_parse = exp_list_match.matches_dict['exp_list']
+                if bool_id in exp_list_to_parse:
+                    id_rhs_match = focused_match_id(
+                        bool_id, exp_list_to_parse, file_path, rhs_rule)
+                    if id_rhs_match:
+                        pattern_matches.append(id_rhs_match)
 
     return pattern_matches
 
@@ -155,6 +186,8 @@ else:
 os.makedirs(base_output_path, exist_ok=True)
 
 return_rules = ['return_id', 'return_id_id', 'return_id_nil', ]
+
+rhs_rules = ['rhs_short_vdecl', 'rhs_assignment', ]
 
 json_index = 0
 

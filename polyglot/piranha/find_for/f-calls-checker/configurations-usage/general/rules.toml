@@ -159,3 +159,25 @@ query = """
     )
 )
 """
+
+# _simple_statement is hidden in the grammar
+# two separate rules
+[[rules]]
+name = "rhs_short_vdecl"
+query = """
+(
+    (short_var_declaration
+        right: (expression_list) @exp_list
+    )
+)
+"""
+
+[[rules]]
+name = "rhs_assignment"
+query = """
+(
+    (assignment_statement
+        right: (expression_list) @exp_list
+    )
+)
+"""

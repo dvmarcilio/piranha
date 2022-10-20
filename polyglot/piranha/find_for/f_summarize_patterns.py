@@ -26,6 +26,8 @@ paths: 'list[str]' = []
 parser = argparse.ArgumentParser()
 parser.add_argument('--test_paths', action='store_true', default=False)
 parser.add_argument('--usage', action='store_true', default=False)
+parser.add_argument('--macro_patterns', action='store_true', default=False)
+parser.add_argument('--print_not_found', action='store_true', default=False)
 args = parser.parse_args()
 
 
@@ -60,12 +62,17 @@ for json_file_path in glob.glob(matches_path + '/*.json'):
         for p in patterns_dict:
             pattern: Pattern = dataclass_from_dict(Pattern, p)
 
-            count_by_pattern[pattern.name] = count_by_pattern.get(
-                pattern.name, 0) + 1
-            pattern_files = files_by_pattern.get(pattern.name, set())
+            p_name = pattern.name
+            if args.usage and args.macro_patterns:
+                names = pattern.name.split(';')
+                p_name = names[0] + ';' + names[1]
+
+            count_by_pattern[p_name] = count_by_pattern.get(
+                p_name, 0) + 1
+            pattern_files = files_by_pattern.get(p_name, set())
             pattern_files.add(pattern.file)
             # probably don't need to reassign
-            files_by_pattern[pattern.name] = pattern_files
+            files_by_pattern[p_name] = pattern_files
 
             total += 1
             distinct_files.add(pattern.file)
@@ -87,10 +94,11 @@ for path in paths:
     if not path in distinct_files:
         nothing_found.append(path)
 
-print(
-    f'\nPaths with `GetBoolValue(` but nothing found ({len(nothing_found)}):\n')
-for p in nothing_found:
-    print(p)
+if args.print_not_found:
+    print(
+        f'\nPaths with `GetBoolValue(` but nothing found ({len(nothing_found)}):\n')
+    for p in nothing_found:
+        print(p)
 
 print('\n## Files per pattern:\n')
 
