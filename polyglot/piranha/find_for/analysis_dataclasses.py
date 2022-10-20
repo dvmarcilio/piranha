@@ -86,6 +86,10 @@ class Range:
     def ends_just_before(self, other: 'Range') -> bool:
         return self.e_point.row == other.e_point.row - 1
 
+    @classmethod
+    def empty(cls) -> 'Range':
+        return Range(Point(-1, -1), Point(-1, -1))
+
 @dataclass(eq=True, frozen=True)
 class FuncLiteral:
     range: Range
@@ -104,6 +108,15 @@ class Channel:
 
     def start_line(self) -> int:
         return self.range.start_row() + 1
+
+@dataclass(eq=True, frozen=True)
+class Match:
+    range: Range
+    matches_dict: 'dict[str, str]'
+
+    @classmethod
+    def empty(cls) -> 'Match':
+        return Match(Range.empty(), {})
 
 @dataclass(eq=True, frozen=True)
 class MethodDecl:

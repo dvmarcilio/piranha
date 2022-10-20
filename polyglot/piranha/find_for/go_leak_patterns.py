@@ -7,7 +7,7 @@ import subprocess
 from polyglot_piranha import run_piranha_cli
 import argparse
 
-from analysis_dataclasses import Point, Range, Channel, FuncLiteral, Pattern, MethodDecl
+from analysis_dataclasses import Match, Point, Range, Channel, FuncLiteral, Pattern, MethodDecl
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -23,43 +23,40 @@ def range_from_match_range(match_range) -> Range:
     return Range(s_p, e_p)
 
 
-def ranges_dict(summary_matches) -> 'tuple[dict[str, list[Range]], list[Channel]]':
+def matches_dict(summary_matches) -> 'dict[str, list[Match]]':
     r_d = {}
-    chans: 'list[Channel]' = []
     for match in summary_matches:
         rule_name = match[0]
         match_range: Range = range_from_match_range(match[1].range)
-        if rule_name == 'chan_make':
-            chan_matches: 'dict[str, str]' = match[1].matches
-            chans.append(Channel(chan_matches['chan_id'], match_range))
-        elif rule_name in r_d:
-            r_d[rule_name].append(match_range)
+        matches_dict = match[1].matches
+        match = Match(match_range, matches_dict)
+        if rule_name in r_d:
+            r_d[rule_name].append(match)
         else:
-            r_d[rule_name] = [match_range]
+            r_d[rule_name] = [match]
 
     for rule, ranges in r_d.items():
         r_d[rule] = list(reversed(ranges))
 
-    chans = list(reversed(chans))
-
-    return r_d, chans
+    return r_d
 
 
 def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
     patterns: 'list[Pattern]' = []
     for summary in piranha_summary:
         file_path: str = summary.path
-        results = ranges_dict(summary.matches)
-        ranges_by_rule: 'dict[str, list[Range]]' = results[0]
-        chans: 'list[Channel]' = results[1]
+        matches_by_rule: 'dict[str, list[Match]]' = matches_dict(
+            summary.matches)
         all_func_lits_ranges: 'list[Range]' = []
         send_channel_ids: 'set[str]' = set()
 
-        if all([rule_name in ranges_by_rule for rule_name in mandatory_rule_names]):
-            for m_decl_range in ranges_by_rule['method_decl']:
+        if all([rule_name in matches_by_rule for rule_name in mandatory_rule_names]):
+            for m_decl_match in matches_by_rule['method_decl']:
+                m_decl_range = m_decl_match.range
                 func_literals: 'list[FuncLiteral]' = []
 
-                for func_lit_range in ranges_by_rule['func_lit']:
+                for func_lit_match in matches_by_rule['func_lit']:
+                    func_lit_range = func_lit_match.range
                     # ordered by line, don't need to look ones that are after
                     if func_lit_range.after(m_decl_range):
                         break
@@ -67,24 +64,27 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                     if func_lit_range.within(m_decl_range):
                         all_func_lits_ranges.append(func_lit_range)
                         within_send_stmts: 'list[Range]' = []
-                        for send_stmt_range in ranges_by_rule['send_stmt']:
+                        for send_stmt_match in matches_by_rule['send_stmt']:
+                            send_stmt_range = send_stmt_match.range
                             if send_stmt_range.after(func_lit_range):
                                 break
                             if send_stmt_range.within(func_lit_range):
-
+                                # TODO: capture id ...
                                 within_send_stmts.append(send_stmt_range)
 
                         # within_send is required
                         if len(within_send_stmts) > 0:
                             within_if_stmts: 'list[Range]' = []
                             within_select_stmts: 'list[Range]' = []
-                            for if_stmt_range in ranges_by_rule.get('if_stmt', []):
+                            for if_stmt_match in matches_by_rule.get('if_stmt', []):
+                                if_stmt_range = if_stmt_match.range
                                 if if_stmt_range.after(func_lit_range):
                                     break
                                 if if_stmt_range.within(func_lit_range):
                                     within_if_stmts.append(if_stmt_range)
 
-                            for select_stmt_range in ranges_by_rule.get('select_stmt', []):
+                            for select_stmt_match in matches_by_rule.get('select_stmt', []):
+                                select_stmt_range = select_stmt_match.range
                                 if select_stmt_range.after(func_lit_range):
                                     break
                                 if select_stmt_range.within(func_lit_range):
@@ -109,7 +109,8 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                     # # func_literal
                     # # # send_statement
                     returns_after_func_lits: 'list[Range]' = []
-                    for ret_range in ranges_by_rule['return_stmt']:
+                    for ret_match in matches_by_rule['return_stmt']:
+                        ret_range = ret_match.range
                         if ret_range.after(m_decl_range):
                             break
 
@@ -119,16 +120,17 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                             # return not inside any func_literal
                             returns_after_func_lits.append(ret_range)
 
-                    # channels before func_literal
                     chans_before_func_lits: 'list[Channel]' = []
-                    if len(chans) > 0:
-                        for chan in chans:
-                            if chan.range.after(m_decl_range):
-                                break
+                    for chan_match in matches_by_rule.get('chan_make', []):
+                        chan_range = chan_match.range
+                        if chan_range.after(m_decl_range):
+                            break
 
-                            if chan.range.within(m_decl_range) and \
-                                    all(chan.range.before(func_lit.range) for func_lit in func_literals):
-                                chans_before_func_lits.append(chan)
+                        if chan_range.within(m_decl_range) and \
+                                all(chan_range.before(func_lit.range) for func_lit in func_literals):
+                            chan = Channel(
+                                chan_match.matches_dict['chan_id'], chan_match.range)
+                            chans_before_func_lits.append(chan)
 
                     # method_declaration
                     # # func_literal
@@ -137,13 +139,14 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
                     if len(returns_after_func_lits) > 0:
 
                         chan_receives_after_rets: 'list[Range]' = []
-                        for chan_rec in ranges_by_rule['chan_receive']:
-                            if chan_rec.after(m_decl_range):
+                        for chan_rec_match in matches_by_rule['chan_receive']:
+                            chan_rec_range = chan_rec_match.range
+                            if chan_rec_range.after(m_decl_range):
                                 break
 
-                            if chan_rec.within(m_decl_range) and \
-                                    any(chan_rec.after(ret_range) for ret_range in returns_after_func_lits):
-                                chan_receives_after_rets.append(chan_rec)
+                            if chan_rec_range.within(m_decl_range) and \
+                                    any(chan_rec_range.after(ret_range) for ret_range in returns_after_func_lits):
+                                chan_receives_after_rets.append(chan_rec_range)
 
                         # method_declaration
                         # # func_literal
@@ -168,10 +171,14 @@ def run_for_piranha_summary(piranha_summary) -> 'list[Pattern]':
 
                                 return ranges
 
-                            after_if_ranges: 'list[Range]' = after_func_lit_within_mdecl(ranges_by_rule.get(
-                                'if_stmt', []))
-                            after_select_ranges: 'list[Range]' = after_func_lit_within_mdecl(ranges_by_rule.get(
-                                'select_stmt', []))
+                            after_if_ranges: 'list[Range]' = after_func_lit_within_mdecl(
+                                [m.range for m in matches_by_rule.get(
+                                    'if_stmt', [])]
+                            )
+                            after_select_ranges: 'list[Range]' = after_func_lit_within_mdecl(
+                                [m.range for m in matches_by_rule.get(
+                                    'select_stmt', [])]
+                            )
                             if_select_stmt_ranges: 'list[Range]' = after_if_ranges + \
                                 after_select_ranges
 
@@ -205,7 +212,8 @@ parser.add_argument('--skip-threshold-mb',
 args = parser.parse_args()
 
 base_path = os.path.join(os.path.dirname(__file__))
-codebase_path = os.path.normpath(os.path.abspath(args.codebase_path)) + os.path.sep
+codebase_path = os.path.normpath(
+    os.path.abspath(args.codebase_path)) + os.path.sep
 
 base_output_path = ''
 if not args.output_path:
